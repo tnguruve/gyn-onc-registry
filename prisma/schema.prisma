@@ -1,0 +1,283 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String
+  passwordHash String
+  role         String
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  auditLogs    AuditLog[]
+  exportLogs   ExportLog[]
+}
+
+model Patient {
+  id              String          @id @default(cuid())
+  registryNumber  String          @unique
+  hospitalNumber  String?
+  nationalId      String?
+  firstName       String
+  surname         String
+  dateOfBirth     DateTime
+  province        String?
+  district        String?
+  maritalStatus   String?
+  educationLevel  String?
+  occupation      String?
+  phone           String?
+  hivStatus       String?
+  artStatus       String?
+  artRegimen      String?
+  cd4Count        Int?
+  viralLoad       String?
+  ecog            String?
+  heightCm        Float?
+  weightKg        Float?
+  bmi             Float?
+  charlsonConditions String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  referral        Referral?
+  diagnosis       Diagnosis?
+  imaging         Imaging?
+  surgeries       Surgery[]
+  histopathology  Histopathology?
+  chemotherapies  Chemotherapy[]
+  radiotherapy    Radiotherapy?
+  complications   Complication[]
+  followUps       FollowUpVisit[]
+  recurrence      Recurrence?
+  survival        Survival?
+  research        ResearchModule?
+}
+
+model Referral {
+  id                        String    @id @default(cuid())
+  patientId                 String    @unique
+  patient                   Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  symptomStartDate          DateTime?
+  firstHealthFacilityVisit  DateTime?
+  referralDate              DateTime?
+  dateSeenAtCancerCenter    DateTime?
+  diagnosisDate             DateTime?
+  treatmentStartDate        DateTime?
+  referralSource            String?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+}
+
+model Diagnosis {
+  id              String    @id @default(cuid())
+  patientId       String    @unique
+  patient         Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  cancerType      String?
+  histology       String?
+  grade           String?
+  figoStage       String?
+  tnmStage        String?
+  mdtDiscussed    Boolean   @default(false)
+  mdtDate         DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Imaging {
+  id                  String   @id @default(cuid())
+  patientId           String   @unique
+  patient             Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  ultrasoundDone      Boolean  @default(false)
+  ctDone              Boolean  @default(false)
+  mriDone             Boolean  @default(false)
+  petDone             Boolean  @default(false)
+  tumorSizeMm         Float?
+  lymphNodesPresent   Boolean  @default(false)
+  ascites             Boolean  @default(false)
+  pleuralEffusion     Boolean  @default(false)
+  pciScore            Int?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Surgery {
+  id                        String   @id @default(cuid())
+  patientId                 String
+  patient                   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  surgeryDate               DateTime
+  surgeon                   String?
+  assistant                 String?
+  procedure                 String?
+  approach                  String?
+  operativeTimeMinutes      Int?
+  bloodLossMl               Int?
+  transfusion               Boolean  @default(false)
+  bowelResection            Boolean  @default(false)
+  bladderResection          Boolean  @default(false)
+  uretericSurgery           Boolean  @default(false)
+  stoma                     Boolean  @default(false)
+  icuAdmission              Boolean  @default(false)
+  intraoperativeComplication String?
+  residualDisease           String?
+  ccScore                   String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+}
+
+model Histopathology {
+  id                  String   @id @default(cuid())
+  patientId           String   @unique
+  patient             Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  pathologyDate       DateTime?
+  histology           String?
+  grade               String?
+  tumorSizeMm         Float?
+  depthInvasion       String?
+  myometrialInvasion  String?
+  lvsi                Boolean  @default(false)
+  marginStatus        String?
+  nodesRemoved        Int?
+  positiveNodes       Int?
+  washings            String?
+  omentum             String?
+  p53                 String?
+  mmr                 String?
+  pole                String?
+  er                  String?
+  pr                  String?
+  brca                String?
+  hrd                 String?
+  ca125               Float?
+  he4                 Float?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Chemotherapy {
+  id              String    @id @default(cuid())
+  patientId       String
+  patient         Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  chemoStartDate  DateTime?
+  regimen         String?
+  cyclesPlanned   Int?
+  cyclesReceived  Int?
+  doseReduction   Boolean   @default(false)
+  toxicityGrade   String?
+  stoppedEarly    Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Radiotherapy {
+  id                    String    @id @default(cuid())
+  patientId             String    @unique
+  patient               Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  ebrtGiven             Boolean   @default(false)
+  ebrtStart             DateTime?
+  ebrtEnd               DateTime?
+  doseGy                Float?
+  fractions             Int?
+  brachytherapyGiven    Boolean   @default(false)
+  brachytherapySessions Int?
+  interrupted           Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model Complication {
+  id                String    @id @default(cuid())
+  patientId         String
+  patient           Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  complicationDate  DateTime?
+  complicationType  String?
+  clavienDindoGrade String?
+  readmission       Boolean   @default(false)
+  reoperation       Boolean   @default(false)
+  icu               Boolean   @default(false)
+  mortality30Day    Boolean   @default(false)
+  mortality90Day    Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model FollowUpVisit {
+  id              String    @id @default(cuid())
+  patientId       String
+  patient         Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  visitDate       DateTime
+  ecog            String?
+  diseaseStatus   String?
+  recurrence      Boolean   @default(false)
+  symptoms        String?
+  treatmentGiven  String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Recurrence {
+  id                      String    @id @default(cuid())
+  patientId               String    @unique
+  patient                 Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  recurrenceDate          DateTime?
+  recurrenceSite          String?
+  biopsyConfirmed         Boolean   @default(false)
+  treatmentForRecurrence  String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+}
+
+model Survival {
+  id            String    @id @default(cuid())
+  patientId     String    @unique
+  patient       Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  aliveStatus   String?
+  dateLastSeen  DateTime?
+  deathDate     DateTime?
+  causeOfDeath  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model ResearchModule {
+  id                    String   @id @default(cuid())
+  patientId             String   @unique
+  patient               Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  consentForResearch    Boolean  @default(false)
+  consentForGenetics    Boolean  @default(false)
+  tissueBank            Boolean  @default(false)
+  bloodSamples          Boolean  @default(false)
+  genomicTesting        Boolean  @default(false)
+  qualityOfLifeScores   String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userEmail  String?
+  action     String
+  entityType String?
+  entityId   String?
+  details    String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+}
+
+model ExportLog {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  filters      String?
+  recordCount  Int
+  deidentified Boolean  @default(true)
+  createdAt    DateTime @default(now())
+}
