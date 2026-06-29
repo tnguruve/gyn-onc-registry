@@ -479,6 +479,27 @@ export async function toggleUserActiveAction(userId: string, active: boolean) {
   redirect("/admin");
 }
 
+export async function deletePatientAction(patientId: string) {
+  const session = await requirePermission("patients:delete");
+
+  const patient = await prisma.patient.findUnique({ where: { id: patientId } });
+  if (!patient) redirectWithError("/patients", "Patient not found");
+
+  await prisma.patient.delete({ where: { id: patientId } });
+
+  await logAudit({
+    userId: session.id,
+    userEmail: session.email,
+    action: "DELETE",
+    entityType: "Patient",
+    entityId: patientId,
+    details: patient.registryNumber,
+  });
+
+  await refreshRegistryViews();
+  redirect("/patients?deleted=1");
+}
+
 export async function logPatientViewAction(patientId: string) {
   const session = await requireSession();
   await logAudit({ userId: session.id, userEmail: session.email, action: "VIEW", entityType: "Patient", entityId: patientId });

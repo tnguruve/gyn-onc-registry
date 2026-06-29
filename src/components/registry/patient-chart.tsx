@@ -14,6 +14,7 @@ import {
   saveSurvivalAction,
   updateDemographicsAction,
 } from "@/app/actions";
+import { DeletePatientButton } from "@/components/registry/delete-patient-button";
 import { ModuleCard, REGISTRY_MODULES } from "@/components/registry/module-card";
 import { SaveFeedback } from "@/components/registry/save-feedback";
 import { CodedSelect, CheckboxField } from "@/components/registry/form-fields";
@@ -68,11 +69,13 @@ export type PatientRecord = Patient & {
 export function PatientRegistryChart({
   patient,
   canWrite,
+  canDelete,
   savedModule,
   errorMessage,
 }: {
   patient: PatientRecord;
   canWrite: boolean;
+  canDelete: boolean;
   savedModule?: string | null;
   errorMessage?: string | null;
 }) {
@@ -110,9 +113,17 @@ export function PatientRegistryChart({
             )}
           </p>
         </div>
-        <Link href="/patients">
-          <Button variant="secondary">Back to search</Button>
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          {canDelete ? (
+            <DeletePatientButton
+              patientId={pid}
+              patientLabel={`${patient.registryNumber} — ${patient.surname}, ${patient.firstName}`}
+            />
+          ) : null}
+          <Link href="/patients">
+            <Button variant="secondary">Back to search</Button>
+          </Link>
+        </div>
       </div>
 
       <SaveFeedback saved={savedModule} error={errorMessage} />

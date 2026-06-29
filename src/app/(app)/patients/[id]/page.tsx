@@ -46,7 +46,8 @@ export default async function PatientChartPage({
   return (
     <PatientRegistryChart
       patient={patient}
-      canWrite={hasPermission(user.role, "clinical:write")}
+      canWrite={hasPermission(user.role, "clinical:write") || hasPermission(user.role, "patients:edit")}
+      canDelete={hasPermission(user.role, "patients:delete")}
       savedModule={query.saved}
       errorMessage={query.error}
     />

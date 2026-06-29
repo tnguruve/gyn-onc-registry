@@ -5,9 +5,11 @@ import {
   filterByWorkflow,
   loadDashboardPatients,
 } from "@/lib/dashboard-metrics";
-import { CANCER_TYPE, FIGO_STAGE, HIV_STATUS, labelFor } from "@/lib/codes";
-import { formatDate } from "@/lib/utils";
+import { FIGO_STAGE, HIV_STATUS, labelFor } from "@/lib/codes";
 import { statusPill } from "@/lib/status-pills";
+import { requireSession } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
+import { DeletePatientButton } from "@/components/registry/delete-patient-button";
 
 const FILTERS = [
   { key: "ALL", label: "All patients" },
@@ -20,8 +22,10 @@ const FILTERS = [
 export default async function PatientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; filter?: string }>;
+  searchParams: Promise<{ q?: string; filter?: string; deleted?: string }>;
 }) {
+  const user = await requireSession();
+  const canDelete = hasPermission(user.role, "patients:delete");
   const params = await searchParams;
   const raw = await loadDashboardPatients();
   const metrics = buildDashboardMetrics(raw);
@@ -31,6 +35,11 @@ export default async function PatientsPage({
 
   return (
     <div>
+      {params.deleted ? (
+        <div className="mb-4 rounded-[10px] border border-[#D5E4E2] bg-[#ECF3F2] px-4 py-3 text-sm text-[#0C4F4E]">
+          Patient record deleted. Dashboard counts have been updated.
+        </div>
+      ) : null}
       <div className="mb-4 flex flex-wrap items-center gap-2.5">
         {FILTERS.map((f) => {
           const active = (params.filter ?? "ALL") === f.key || (!params.filter && f.key === "ALL");
@@ -61,12 +70,15 @@ export default async function PatientsPage({
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-[#EAE5DA] bg-white">
-        <div className="grid grid-cols-[1.5fr_1fr_.7fr_.8fr_1fr] gap-3 border-b border-[#EAE5DA] px-5 py-3.5 text-[11.5px] font-semibold tracking-wide text-[#9aa5a0] uppercase">
-          <div>Patient</div>
-          <div>Diagnosis</div>
-          <div>Stage</div>
-          <div>HIV</div>
-          <div>Status</div>
+        <div className="grid grid-cols-[1.5fr_1fr_.7fr_.8fr_1fr_auto] gap-3 border-b border-[#EAE5DA] px-5 py-3.5 text-[11.5px] font-semibold tracking-wide text-[#9aa5a0] uppercase">
+          <div className="col-span-5 grid grid-cols-[1.5fr_1fr_.7fr_.8fr_1fr] gap-3">
+            <div>Patient</div>
+            <div>Diagnosis</div>
+            <div>Stage</div>
+            <div>HIV</div>
+            <div>Status</div>
+          </div>
+          {canDelete ? <div className="text-right">Actions</div> : null}
         </div>
         {patients.map((p) => {
           const pill = statusPill(p.workflowStatus);
@@ -75,11 +87,14 @@ export default async function PatientsPage({
               ? { bg: "#F3E9EF", text: "#7A3B5E", label: "Positive" }
               : { bg: "#EEF1EC", text: "#5C6B66", label: labelFor(HIV_STATUS, p.hivStatus) || "—" };
           return (
-            <Link
+            <div
               key={p.id}
-              href={`/patients/${p.id}`}
-              className="grid grid-cols-[1.5fr_1fr_.7fr_.8fr_1fr] items-center gap-3 border-b border-[#F4F0E8] px-5 py-3.5 transition hover:bg-[#FBFAF6]"
+              className="grid grid-cols-[1.5fr_1fr_.7fr_.8fr_1fr_auto] items-center gap-3 border-b border-[#F4F0E8] px-5 py-3.5"
             >
+              <Link
+                href={`/patients/${p.id}`}
+                className="col-span-5 grid grid-cols-[1.5fr_1fr_.7fr_.8fr_1fr] items-center gap-3 transition hover:opacity-80"
+              >
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px] bg-[#ECF3F2] text-[13px] font-semibold text-[#0C4F4E]">
                   {p.initials}
@@ -109,7 +124,17 @@ export default async function PatientsPage({
               >
                 {pill.label}
               </span>
-            </Link>
+              </Link>
+              {canDelete ? (
+                <div className="flex justify-end">
+                  <DeletePatientButton
+                    patientId={p.id}
+                    patientLabel={`${p.displayId} — ${p.surname}, ${p.firstName}`}
+                    variant="inline"
+                  />
+                </div>
+              ) : null}
+            </div>
           );
         })}
         {patients.length === 0 ? (

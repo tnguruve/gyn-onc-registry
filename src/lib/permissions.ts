@@ -4,6 +4,7 @@ export type Permission =
   | "patients:read"
   | "patients:create"
   | "patients:edit"
+  | "patients:delete"
   | "clinical:read"
   | "clinical:write"
   | "reports:read"
@@ -13,16 +14,16 @@ export type Permission =
 
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ADMIN: [
-    "patients:read", "patients:create", "patients:edit",
+    "patients:read", "patients:create", "patients:edit", "patients:delete",
     "clinical:read", "clinical:write", "reports:read",
     "export:deidentified", "admin:users", "admin:audit",
   ],
   CLINICIAN: [
-    "patients:read", "patients:create", "patients:edit",
+    "patients:read", "patients:create", "patients:edit", "patients:delete",
     "clinical:read", "clinical:write", "reports:read",
   ],
-  FRONT_DESK: ["patients:read", "patients:create", "patients:edit"],
-  RESEARCHER: ["patients:read", "clinical:read", "reports:read", "export:deidentified"],
+  FRONT_DESK: ["patients:read", "patients:create", "patients:edit", "patients:delete"],
+  RESEARCHER: ["patients:read", "clinical:read", "reports:read", "export:deidentified", "patients:delete"],
 };
 
 export function hasPermission(role: UserRole | string, permission: Permission): boolean {
