@@ -15,7 +15,9 @@ import { logAudit } from "@/lib/audit";
 import { boolFromForm, codeFromForm } from "@/lib/codes";
 import { serializeCharlsonConditions } from "@/lib/comorbidities";
 import { calcBmi } from "@/lib/esgo-metrics";
-import { loginSchema, userSchema } from "@/lib/validators";
+import { loginSchema } from "@/lib/validators";
+import { computeWorkflowStatus } from "@/lib/patient-workflow";
+import { buildInviteUrl, generateInviteToken, inviteExpiry } from "@/lib/invites";
 
 function redirectWithError(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
@@ -43,6 +45,23 @@ function parseFloatField(value: FormDataEntryValue | null): number | undefined {
 
 function patientPath(id: string) {
   return `/patients/${id}`;
+}
+
+async function refreshRegistryViews(patientId?: string) {
+  if (patientId) {
+    const full = await prisma.patient.findUnique({
+      where: { id: patientId },
+      include: { referral: true, diagnosis: true, surgeries: true, followUps: true },
+    });
+    if (full) {
+      await prisma.patient.update({
+        where: { id: patientId },
+        data: { workflowStatus: computeWorkflowStatus(full) },
+      });
+    }
+  }
+  revalidatePath("/dashboard");
+  revalidatePath("/patients");
 }
 
 function demographicsFromForm(formData: FormData, dob: Date) {
@@ -110,7 +129,7 @@ export async function createPatientAction(formData: FormData) {
   });
 
   await logAudit({ userId: session.id, userEmail: session.email, action: "CREATE", entityType: "Patient", entityId: patient.id, details: registryNumber });
-  revalidatePath("/patients");
+  await refreshRegistryViews(patient.id);
   redirect(patientPath(patient.id));
 }
 
@@ -124,6 +143,7 @@ export async function updateDemographicsAction(patientId: string, formData: Form
     data: demographicsFromForm(formData, dob),
   });
   await logAudit({ userId: session.id, userEmail: session.email, action: "UPDATE", entityType: "Patient", entityId: patientId });
+  await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
   redirect(`${patientPath(patientId)}?saved=demographics`);
 }
@@ -141,6 +161,7 @@ export async function saveReferralAction(patientId: string, formData: FormData) 
   };
   await prisma.referral.upsert({ where: { patientId }, create: { patientId, ...data }, update: data });
   await logAudit({ userId: session.id, userEmail: session.email, action: "UPDATE", entityType: "Referral", entityId: patientId });
+  await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
   redirect(`${patientPath(patientId)}?saved=referral#referral`);
 }
@@ -158,6 +179,7 @@ export async function saveDiagnosisAction(patientId: string, formData: FormData)
   };
   await prisma.diagnosis.upsert({ where: { patientId }, create: { patientId, ...data }, update: data });
   await logAudit({ userId: session.id, userEmail: session.email, action: "UPDATE", entityType: "Diagnosis", entityId: patientId });
+  await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
   redirect(`${patientPath(patientId)}?saved=diagnosis#diagnosis`);
 }
@@ -177,6 +199,7 @@ export async function saveImagingAction(patientId: string, formData: FormData) {
   };
   await prisma.imaging.upsert({ where: { patientId }, create: { patientId, ...data }, update: data });
   await logAudit({ userId: session.id, userEmail: session.email, action: "UPDATE", entityType: "Imaging", entityId: patientId });
+  await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
   redirect(`${patientPath(patientId)}?saved=imaging#imaging`);
 }
@@ -207,6 +230,7 @@ export async function addSurgeryAction(patientId: string, formData: FormData) {
     },
   });
   await logAudit({ userId: session.id, userEmail: session.email, action: "CREATE", entityType: "Surgery", entityId: patientId });
+  await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
   redirect(`${patientPath(patientId)}#surgery`);
 }
@@ -238,6 +262,7 @@ export async function saveHistopathologyAction(patientId: string, formData: Form
   };
   await prisma.histopathology.upsert({ where: { patientId }, create: { patientId, ...data }, update: data });
   await logAudit({ userId: session.id, userEmail: session.email, action: "UPDATE", entityType: "Histopathology", entityId: patientId });
+  await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
   redirect(`${patientPath(patientId)}#histopathology`);
 }
@@ -257,6 +282,7 @@ export async function addChemotherapyAction(patientId: string, formData: FormDat
     },
   });
   await logAudit({ userId: session.id, userEmail: session.email, action: "CREATE", entityType: "Chemotherapy", entityId: patientId });
+  await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
   redirect(`${patientPath(patientId)}#chemotherapy`);
 }
@@ -275,6 +301,7 @@ export async function saveRadiotherapyAction(patientId: string, formData: FormDa
   };
   await prisma.radiotherapy.upsert({ where: { patientId }, create: { patientId, ...data }, update: data });
   await logAudit({ userId: session.id, userEmail: session.email, action: "UPDATE", entityType: "Radiotherapy", entityId: patientId });
+  await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
   redirect(`${patientPath(patientId)}#radiotherapy`);
 }
@@ -295,6 +322,7 @@ export async function addComplicationAction(patientId: string, formData: FormDat
     },
   });
   await logAudit({ userId: session.id, userEmail: session.email, action: "CREATE", entityType: "Complication", entityId: patientId });
+  await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
   redirect(`${patientPath(patientId)}#complications`);
 }
@@ -315,6 +343,7 @@ export async function addFollowUpAction(patientId: string, formData: FormData) {
     },
   });
   await logAudit({ userId: session.id, userEmail: session.email, action: "CREATE", entityType: "FollowUp", entityId: patientId });
+  await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
   redirect(`${patientPath(patientId)}#followup`);
 }
@@ -329,6 +358,7 @@ export async function saveRecurrenceAction(patientId: string, formData: FormData
   };
   await prisma.recurrence.upsert({ where: { patientId }, create: { patientId, ...data }, update: data });
   await logAudit({ userId: session.id, userEmail: session.email, action: "UPDATE", entityType: "Recurrence", entityId: patientId });
+  await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
   redirect(`${patientPath(patientId)}#recurrence`);
 }
@@ -343,6 +373,7 @@ export async function saveSurvivalAction(patientId: string, formData: FormData) 
   };
   await prisma.survival.upsert({ where: { patientId }, create: { patientId, ...data }, update: data });
   await logAudit({ userId: session.id, userEmail: session.email, action: "UPDATE", entityType: "Survival", entityId: patientId });
+  await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
   redirect(`${patientPath(patientId)}#survival`);
 }
@@ -359,45 +390,93 @@ export async function saveResearchAction(patientId: string, formData: FormData) 
   };
   await prisma.researchModule.upsert({ where: { patientId }, create: { patientId, ...data }, update: data });
   await logAudit({ userId: session.id, userEmail: session.email, action: "UPDATE", entityType: "Research", entityId: patientId });
+  await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
   redirect(`${patientPath(patientId)}#research`);
 }
 
-export async function createUserAction(formData: FormData) {
+export async function createInviteAction(formData: FormData) {
   const session = await requirePermission("admin:users");
-  const parsed = userSchema.safeParse({
-    name: formData.get("name"),
-    email: formData.get("email"),
-    role: formData.get("role"),
-    password: formData.get("password") || undefined,
-    active: formData.get("active") === "on",
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const role = String(formData.get("role") ?? "CLINICIAN");
+
+  if (!name || !email) redirectWithError("/admin", "Name and email are required");
+
+  const existingUser = await prisma.user.findUnique({ where: { email } });
+  if (existingUser) redirectWithError("/admin", "A user with this email already exists");
+
+  const pending = await prisma.invite.findFirst({
+    where: { email, usedAt: null, expiresAt: { gt: new Date() } },
   });
-  if (!parsed.success) redirectWithError("/admin/users", parsed.error.issues[0]?.message ?? "Validation failed");
-  if (!parsed.data.password) redirectWithError("/admin/users", "Password is required for new users");
-  const existing = await prisma.user.findUnique({ where: { email: parsed.data.email.toLowerCase() } });
-  if (existing) redirectWithError("/admin/users", "A user with this email already exists");
+  if (pending) redirectWithError("/admin", "An active invite already exists for this email");
+
+  const token = generateInviteToken();
+  const invite = await prisma.invite.create({
+    data: {
+      name,
+      email,
+      role,
+      token,
+      expiresAt: inviteExpiry(7),
+      createdById: session.id,
+    },
+  });
+
+  const inviteUrl = buildInviteUrl(invite.token);
+  await logAudit({
+    userId: session.id,
+    userEmail: session.email,
+    action: "CREATE_INVITE",
+    entityType: "Invite",
+    entityId: invite.id,
+    details: email,
+  });
+  revalidatePath("/admin");
+  redirect(`/admin?invite=${encodeURIComponent(inviteUrl)}`);
+}
+
+export async function acceptInviteAction(token: string, formData: FormData) {
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirmPassword") ?? "");
+  if (password.length < 8) redirectWithError(`/invite/${token}`, "Password must be at least 8 characters");
+  if (password !== confirm) redirectWithError(`/invite/${token}`, "Passwords do not match");
+
+  const invite = await prisma.invite.findUnique({ where: { token } });
+  if (!invite || invite.usedAt || invite.expiresAt < new Date()) {
+    redirect("/login?error=Invalid+or+expired+invitation");
+  }
 
   const user = await prisma.user.create({
     data: {
-      name: parsed.data.name.trim(),
-      email: parsed.data.email.toLowerCase().trim(),
-      role: parsed.data.role,
-      active: parsed.data.active ?? true,
-      passwordHash: await hashPassword(parsed.data.password),
+      name: invite.name,
+      email: invite.email,
+      role: invite.role,
+      passwordHash: await hashPassword(password),
+      active: true,
     },
   });
-  await logAudit({ userId: session.id, userEmail: session.email, action: "CREATE", entityType: "User", entityId: user.id });
-  revalidatePath("/admin/users");
-  redirect("/admin/users?saved=user");
+
+  await prisma.invite.update({ where: { id: invite.id }, data: { usedAt: new Date() } });
+
+  await createSession({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role as import("@/lib/types").UserRole,
+  });
+
+  await logAudit({ userId: user.id, userEmail: user.email, action: "ACCEPT_INVITE", entityType: "User", entityId: user.id });
+  redirect("/dashboard");
 }
 
 export async function toggleUserActiveAction(userId: string, active: boolean) {
   const session = await requirePermission("admin:users");
-  if (userId === session.id && !active) redirectWithError("/admin/users", "You cannot disable your own account");
+  if (userId === session.id && !active) redirectWithError("/admin", "You cannot disable your own account");
   await prisma.user.update({ where: { id: userId }, data: { active } });
   await logAudit({ userId: session.id, userEmail: session.email, action: active ? "ENABLE_USER" : "DISABLE_USER", entityType: "User", entityId: userId });
-  revalidatePath("/admin/users");
-  redirect("/admin/users");
+  revalidatePath("/admin");
+  redirect("/admin");
 }
 
 export async function logPatientViewAction(patientId: string) {

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes scIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes scFade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes scGlow { 0%,100% { opacity: .55; } 50% { opacity: .9; } }
+  @keyframes scSpin { to { transform: rotate(360deg); } }
+  input::placeholder { color: #9aa5a0; }
+</style>
+</helmet>
+<div style="min-height: 100vh; width: 100%; background: #F4F1EB; font-family: 'IBM Plex Sans', sans-serif; color: #1A2421; display: flex; align-items: stretch; overflow: hidden;">
+
+  <!-- LEFT BRAND PANEL -->
+  <div style="position: relative; width: 44%; min-width: 460px; flex-shrink: 0; background:
+      radial-gradient(120% 90% at 18% 12%, #14706E 0%, #0C4F4E 46%, #0A3C3D 100%);
+      color: #EAF2F0; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; padding: 56px 56px 48px;">
+    <div aria-hidden="true" style="position: absolute; right: -160px; top: -120px; width: 520px; height: 520px; border-radius: 50%; background: radial-gradient(circle at 50% 50%, rgba(122,59,94,.55), rgba(122,59,94,0) 70%); animation: scGlow 9s ease-in-out infinite;"></div>
+    <div aria-hidden="true" style="position: absolute; inset: 0; opacity: .14; background-image: linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px); background-size: 46px 46px; mask-image: radial-gradient(80% 80% at 30% 30%, #000 0%, transparent 75%);"></div>
+
+    <div style="position: relative; display: flex; align-items: center; gap: 13px; animation: scFade .7s ease .06s forwards;">
+      <div style="width: 38px; height: 38px; border-radius: 9px; border: 1.5px solid rgba(234,242,240,.5); display: flex; align-items: center; justify-content: center;">
+        <div style="width: 14px; height: 14px; border-radius: 50%; border: 2px solid #EAF2F0; position: relative;">
+          <div style="position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #C98AAE; top: -3px; left: 50%; transform: translateX(-50%);"></div>
+        </div>
+      </div>
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(234,242,240,.78);">Gyn-Onc Registry</div>
+    </div>
+
+    <div style="position: relative;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: #C98AAE; margin-bottom: 22px; animation: scIn .7s ease .1s forwards;">Clinical Data Platform</div>
+      <h1 style="font-family: 'Spectral', serif; font-weight: 500; font-size: 50px; line-height: 1.08; letter-spacing: -.5px; margin: 0 0 22px; max-width: 14ch; animation: scIn .7s ease .16s forwards;">Gynaecological Oncology Registry</h1>
+      <p style="font-size: 16.5px; line-height: 1.6; color: rgba(234,242,240,.74); max-width: 40ch; margin: 0; animation: scIn .7s ease .24s forwards;">A structured registry for patient care, multidisciplinary review, and research-grade outcomes — built for the people who run the clinic.</p>
+
+      <div style="display: flex; gap: 34px; margin-top: 40px; animation: scIn .7s ease .32s forwards;">
+        <div>
+          <div style="font-family: 'Spectral', serif; font-size: 30px; font-weight: 600;">11</div>
+          <div style="font-size: 12.5px; color: rgba(234,242,240,.6); margin-top: 3px;">Core modules</div>
+        </div>
+        <div style="width: 1px; background: rgba(234,242,240,.18);"></div>
+        <div>
+          <div style="font-family: 'Spectral', serif; font-size: 30px; font-weight: 600;">6</div>
+          <div style="font-size: 12.5px; color: rgba(234,242,240,.6); margin-top: 3px;">Export formats</div>
+        </div>
+        <div style="width: 1px; background: rgba(234,242,240,.18);"></div>
+        <div>
+          <div style="font-family: 'Spectral', serif; font-size: 30px; font-weight: 600;">∞</div>
+          <div style="font-size: 12.5px; color: rgba(234,242,240,.6); margin-top: 3px;">Custom fields</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="position: relative; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: rgba(234,242,240,.5); animation: scFade .7s ease .42s forwards;">
+      <span style="font-family: 'IBM Plex Mono', monospace;">v2.2 · Final</span>
+      <span>Secure · Audit-logged · Role-based</span>
+    </div>
+  </div>
+
+  <!-- RIGHT INTERACTIVE PANEL -->
+  <div style="flex: 1; position: relative; display: flex; align-items: center; justify-content: center; padding: 40px;">
+
+    <!-- top-right step indicator -->
+    <div style="position: absolute; top: 30px; right: 38px; display: flex; align-items: center; gap: 9px;">
+      <sc-for list="{{ steps }}" as="s" hint-placeholder-count="3">
+        <div style="width: {{ s.w }}; height: 4px; border-radius: 2px; background: {{ s.bg }}; transition: all .4s ease;"></div>
+      </sc-for>
+    </div>
+
+    <!-- WELCOME -->
+    <sc-if value="{{ isWelcome }}" hint-placeholder-val="{{ true }}">
+      <div style="width: 100%; max-width: 400px; animation: scIn .55s ease .04s forwards;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #7A3B5E; margin-bottom: 16px;">Welcome</div>
+        <h2 style="font-family: 'Spectral', serif; font-weight: 600; font-size: 34px; line-height: 1.15; margin: 0 0 14px; letter-spacing: -.4px;">Sign in to the registry</h2>
+        <p style="font-size: 15.5px; line-height: 1.6; color: #5C6B66; margin: 0 0 36px;">Access is restricted to authorised clinical and research staff. All activity is recorded in the audit trail.</p>
+
+        <button onClick="{{ goSignin }}" style="width: 100%; height: 54px; border: none; border-radius: 12px; background: #0C4F4E; color: #fff; font-family: 'IBM Plex Sans', sans-serif; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 10px 24px -10px rgba(12,79,78,.65); transition: transform .15s ease, box-shadow .2s ease;" style-hover="{{ btnHover }}">
+          Continue to sign in
+          <span style="font-size: 18px;">→</span>
+        </button>
+
+        <div style="display: flex; align-items: center; gap: 12px; margin: 28px 0;">
+          <div style="flex: 1; height: 1px; background: #E2DDD3;"></div>
+          <span style="font-size: 12px; color: #9aa5a0;">or</span>
+          <div style="flex: 1; height: 1px; background: #E2DDD3;"></div>
+        </div>
+
+        <button onClick="{{ goSSO }}" style="width: 100%; height: 50px; border: 1.5px solid #DDD7CB; border-radius: 12px; background: #fff; color: #1A2421; font-family: 'IBM Plex Sans', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: border-color .2s ease, background .2s ease;" style-hover="{{ ssoHover }}">
+          <span style="width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid #7A3B5E; display: inline-block;"></span>
+          Continue with hospital SSO
+        </button>
+
+        <p style="font-size: 12.5px; color: #9aa5a0; margin: 32px 0 0; line-height: 1.6;">Need access? Contact your registry administrator. Unauthorised access is prohibited.</p>
+      </div>
+    </sc-if>
+
+    <!-- SIGN IN -->
+    <sc-if value="{{ isSignin }}" hint-placeholder-val="{{ false }}">
+      <div style="width: 100%; max-width: 400px; animation: scIn .5s ease .04s forwards;">
+        <button onClick="{{ back }}" style="background: none; border: none; cursor: pointer; color: #5C6B66; font-family: 'IBM Plex Sans', sans-serif; font-size: 13.5px; padding: 0; margin-bottom: 28px; display: flex; align-items: center; gap: 6px;">← Back</button>
+        <h2 style="font-family: 'Spectral', serif; font-weight: 600; font-size: 30px; margin: 0 0 8px; letter-spacing: -.3px;">Staff sign in</h2>
+        <p style="font-size: 14.5px; color: #5C6B66; margin: 0 0 30px;">Enter your registry credentials to continue.</p>
+
+        <label style="display: block; font-size: 12.5px; font-weight: 600; letter-spacing: .3px; color: #45524D; margin-bottom: 8px;">Username</label>
+        <input value="{{ username }}" onChange="{{ onUser }}" placeholder="e.g. j.moyo" autocomplete="off" style="{{ userInputStyle }}" />
+
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin: 22px 0 8px;">
+          <label style="font-size: 12.5px; font-weight: 600; letter-spacing: .3px; color: #45524D;">Password</label>
+          <a href="#" style="font-size: 12.5px; color: #7A3B5E; text-decoration: none;">Forgot?</a>
+        </div>
+        <input value="{{ password }}" onChange="{{ onPass }}" type="password" placeholder="••••••••" style="{{ passInputStyle }}" />
+
+        <sc-if value="{{ error }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top: 16px; font-size: 13px; color: #B23A48; background: #FBEEEE; border: 1px solid #F2D6D6; padding: 10px 14px; border-radius: 9px; animation: scFade .3s ease .02s forwards;">{{ error }}</div>
+        </sc-if>
+
+        <label style="display: flex; align-items: center; gap: 9px; margin: 22px 0 28px; font-size: 13.5px; color: #5C6B66; cursor: pointer;">
+          <input type="checkbox" checked="{{ remember }}" onChange="{{ onRemember }}" style="width: 16px; height: 16px; accent-color: #0C4F4E;" />
+          Keep me signed in on this device
+        </label>
+
+        <button onClick="{{ submitSignin }}" style="width: 100%; height: 54px; border: none; border-radius: 12px; background: #0C4F4E; color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 10px 24px -10px rgba(12,79,78,.65); transition: transform .15s ease;" style-hover="{{ btnHover }}">
+          <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
+            <span style="width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: scSpin .7s linear infinite;"></span>
+          </sc-if>
+          <sc-if value="{{ notLoading }}" hint-placeholder-val="{{ true }}">
+            <span>Sign in</span>
+          </sc-if>
+        </button>
+        <p style="font-size: 12px; color: #9aa5a0; margin: 18px 0 0; text-align: center;">Hint — any username with password <span style="font-family: 'IBM Plex Mono', monospace; color: #7A3B5E;">registry</span></p>
+      </div>
+    </sc-if>
+
+    <!-- VERIFY -->
+    <sc-if value="{{ isVerify }}" hint-placeholder-val="{{ false }}">
+      <div style="width: 100%; max-width: 400px; animation: scIn .5s ease .04s forwards;">
+        <button onClick="{{ backToSignin }}" style="background: none; border: none; cursor: pointer; color: #5C6B66; font-size: 13.5px; padding: 0; margin-bottom: 28px; display: flex; align-items: center; gap: 6px; font-family: 'IBM Plex Sans', sans-serif;">← Back</button>
+        <div style="width: 46px; height: 46px; border-radius: 12px; background: #ECF3F2; border: 1px solid #D5E4E2; display: flex; align-items: center; justify-content: center; margin-bottom: 22px;">
+          <div style="width: 16px; height: 13px; border: 2px solid #0C4F4E; border-radius: 3px; position: relative;"></div>
+        </div>
+        <h2 style="font-family: 'Spectral', serif; font-weight: 600; font-size: 30px; margin: 0 0 8px; letter-spacing: -.3px;">Verify it's you</h2>
+        <p style="font-size: 14.5px; color: #5C6B66; margin: 0 0 30px; line-height: 1.55;">We sent a 6-digit code to your registered device. Enter it below to continue.</p>
+
+        <div style="display: flex; gap: 10px; margin-bottom: 8px;">
+          <sc-for list="{{ otpCells }}" as="c" hint-placeholder-count="6">
+            <input value="{{ c.val }}" onInput="{{ c.onInput }}" onKeyDown="{{ c.onKey }}" ref="{{ c.ref }}" maxlength="1" inputmode="numeric" style="{{ c.style }}" />
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ otpError }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top: 14px; font-size: 13px; color: #B23A48;">{{ otpError }}</div>
+        </sc-if>
+
+        <button onClick="{{ submitOtp }}" style="width: 100%; height: 54px; margin-top: 28px; border: none; border-radius: 12px; background: #0C4F4E; color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 10px 24px -10px rgba(12,79,78,.65);">
+          <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
+            <span style="width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: scSpin .7s linear infinite;"></span>
+          </sc-if>
+          <sc-if value="{{ notLoading }}" hint-placeholder-val="{{ true }}">
+            <span>Verify &amp; enter registry</span>
+          </sc-if>
+        </button>
+        <p style="font-size: 12.5px; color: #9aa5a0; margin: 18px 0 0; text-align: center;">Didn't get a code? <a href="#" style="color: #7A3B5E; text-decoration: none;">Resend</a> · use <span style="font-family: 'IBM Plex Mono', monospace; color: #7A3B5E;">000000</span></p>
+      </div>
+    </sc-if>
+
+    <!-- HOME -->
+    <sc-if value="{{ isHome }}" hint-placeholder-val="{{ false }}">
+      <div style="width: 100%; max-width: 480px; animation: scIn .55s ease .04s forwards;">
+        <div style="display: inline-flex; align-items: center; gap: 8px; background: #ECF3F2; border: 1px solid #D5E4E2; padding: 6px 13px; border-radius: 999px; font-size: 12.5px; color: #0C4F4E; font-weight: 600; margin-bottom: 24px;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #1F8A5B;"></span> Signed in
+        </div>
+        <h2 style="font-family: 'Spectral', serif; font-weight: 600; font-size: 32px; margin: 0 0 8px; letter-spacing: -.3px;">Welcome back, {{ displayName }}</h2>
+        <p style="font-size: 15px; color: #5C6B66; margin: 0 0 30px;">{{ roleLabel }} · Parirenyatwa Group of Hospitals</p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+          <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="4">
+            <button onClick="{{ t.onClick }}" style="text-align: left; background: #fff; border: 1.5px solid #E7E2D7; border-radius: 14px; padding: 18px; cursor: pointer; transition: border-color .2s ease, transform .15s ease, box-shadow .2s ease;" style-hover="{{ tileHover }}">
+              <div style="width: 36px; height: 36px; border-radius: 9px; background: {{ t.iconBg }}; color: {{ t.iconColor }}; display: flex; align-items: center; justify-content: center; font-size: 17px; margin-bottom: 14px;">{{ t.icon }}</div>
+              <div style="font-size: 15px; font-weight: 600; margin-bottom: 3px;">{{ t.title }}</div>
+              <div style="font-size: 12.5px; color: #7C8983; line-height: 1.4;">{{ t.sub }}</div>
+            </button>
+          </sc-for>
+        </div>
+
+        <button onClick="{{ signOut }}" style="margin-top: 14px; background: none; border: none; color: #7A3B5E; font-size: 13.5px; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif;">Sign out</button>
+      </div>
+    </sc-if>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    screen: 'welcome',
+    username: '', password: '', remember: true,
+    error: '', otpError: '', loading: false,
+    otp: ['', '', '', '', '', ''],
+  };
+
+  otpRefs = [0,1,2,3,4,5].map(() => React.createRef());
+
+  go(screen) { this.setState({ screen, error: '', otpError: '' }); }
+
+  submitSignin = () => {
+    const { username, password } = this.state;
+    if (!username.trim()) { this.setState({ error: 'Please enter your username.' }); return; }
+    if (!password) { this.setState({ error: 'Please enter your password.' }); return; }
+    if (password !== 'registry') { this.setState({ error: 'Incorrect credentials. Try password “registry”.' }); return; }
+    this.setState({ loading: true, error: '' });
+    setTimeout(() => this.setState({ loading: false, screen: 'verify' }), 850);
+  };
+
+  onOtp = (i, val) => {
+    const v = val.replace(/[^0-9]/g, '').slice(0, 1);
+    const otp = this.state.otp.slice();
+    otp[i] = v;
+    this.setState({ otp, otpError: '' });
+    if (v && i < 5 && this.otpRefs[i + 1].current) this.otpRefs[i + 1].current.focus();
+  };
+
+  onOtpKey = (i, e) => {
+    if (e.key === 'Backspace' && !this.state.otp[i] && i > 0 && this.otpRefs[i - 1].current) {
+      this.otpRefs[i - 1].current.focus();
+    }
+  };
+
+  submitOtp = () => {
+    const code = this.state.otp.join('');
+    if (code.length < 6) { this.setState({ otpError: 'Enter all six digits.' }); return; }
+    if (code !== '000000') { this.setState({ otpError: 'Invalid code. For this demo, use 000000.' }); return; }
+    this.setState({ loading: true, otpError: '' });
+    setTimeout(() => this.setState({ loading: false, screen: 'home' }), 900);
+  };
+
+  inputStyle(active) {
+    return {
+      width: '100%', height: '50px', borderRadius: '12px',
+      border: '1.5px solid ' + (active ? '#0C4F4E' : '#DDD7CB'),
+      background: '#fff', padding: '0 16px', fontSize: '15.5px',
+      fontFamily: "'IBM Plex Sans', sans-serif", color: '#1A2421',
+      outline: 'none', boxShadow: active ? '0 0 0 4px rgba(12,79,78,.10)' : 'none',
+      transition: 'border-color .18s ease, box-shadow .18s ease',
+    };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const order = ['welcome', 'signin', 'verify', 'home'];
+    const idx = order.indexOf(s.screen);
+    const steps = order.slice(0, 3).map((_, i) => ({
+      w: i === Math.min(idx, 2) ? '26px' : '14px',
+      bg: i <= idx ? '#0C4F4E' : '#DBD5C9',
+    }));
+
+    const otpCells = s.otp.map((val, i) => ({
+      val,
+      ref: this.otpRefs[i],
+      onInput: (e) => this.onOtp(i, e.target.value),
+      onKey: (e) => this.onOtpKey(i, e),
+      style: {
+        width: '54px', height: '60px', textAlign: 'center',
+        fontFamily: "'IBM Plex Mono', monospace", fontSize: '24px', fontWeight: 500,
+        borderRadius: '12px', border: '1.5px solid ' + (val ? '#0C4F4E' : '#DDD7CB'),
+        background: '#fff', color: '#1A2421', outline: 'none',
+        boxShadow: val ? '0 0 0 3px rgba(12,79,78,.08)' : 'none',
+        transition: 'border-color .15s ease',
+      },
+    }));
+
+    const enter = (route) => { window.location.href = 'Registry.dc.html#' + route; };
+    const tiles = [
+      { icon: '▦', iconBg: '#E7F1EE', iconColor: '#0C4F4E', title: 'Open dashboard', sub: 'Activity & analytics', onClick: () => enter('dashboard') },
+      { icon: '＋', iconBg: '#F3E9EF', iconColor: '#7A3B5E', title: 'New patient', sub: 'Begin a registration', onClick: () => enter('new') },
+      { icon: '❏', iconBg: '#E7F1EE', iconColor: '#0C4F4E', title: 'Find patient', sub: 'Search the registry', onClick: () => enter('patients') },
+      { icon: '⤓', iconBg: '#F3E9EF', iconColor: '#7A3B5E', title: 'Export data', sub: 'Excel · CSV · SPSS', onClick: () => enter('exports') },
+    ];
+
+    return {
+      steps,
+      isWelcome: s.screen === 'welcome',
+      isSignin: s.screen === 'signin',
+      isVerify: s.screen === 'verify',
+      isHome: s.screen === 'home',
+      goSignin: () => this.go('signin'),
+      goSSO: () => this.go('signin'),
+      back: () => this.go('welcome'),
+      backToSignin: () => this.go('signin'),
+      username: s.username, password: s.password, remember: s.remember,
+      onUser: (e) => this.setState({ username: e.target.value, error: '' }),
+      onPass: (e) => this.setState({ password: e.target.value, error: '' }),
+      onRemember: (e) => this.setState({ remember: e.target.checked }),
+      userInputStyle: this.inputStyle(!!s.username),
+      passInputStyle: this.inputStyle(!!s.password),
+      error: s.error, otpError: s.otpError,
+      loading: s.loading, notLoading: !s.loading,
+      submitSignin: this.submitSignin,
+      otpCells,
+      submitOtp: this.submitOtp,
+      displayName: s.username ? (s.username.split(/[._]/).pop().replace(/^\w/, c => c.toUpperCase())) : 'Doctor',
+      roleLabel: 'Registry Clinician',
+      tiles,
+      signOut: () => this.setState({ screen: 'welcome', username: '', password: '', otp: ['','','','','',''] }),
+      btnHover: { transform: 'translateY(-1px)', boxShadow: '0 14px 30px -10px rgba(12,79,78,.7)' },
+      ssoHover: { borderColor: '#7A3B5E', background: '#FCFAF7' },
+      tileHover: { borderColor: '#0C4F4E', transform: 'translateY(-2px)', boxShadow: '0 12px 26px -16px rgba(12,79,78,.5)' },
+    };
+  }
+}
+</script>
+</body>
+</html>

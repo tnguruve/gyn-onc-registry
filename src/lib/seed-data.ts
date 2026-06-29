@@ -49,11 +49,11 @@ export async function seedRegistry(prisma: PrismaClient) {
     });
   }
 
-  const demo = await prisma.patient.findUnique({ where: { registryNumber: "GYN0001" } });
+  const demo = await prisma.patient.findUnique({ where: { registryNumber: "GYN-0001" } });
   if (!demo) {
     const patient = await prisma.patient.create({
       data: {
-        registryNumber: "GYN0001",
+        registryNumber: "GYN-0001",
         hospitalNumber: "H23456",
         firstName: "Tariro",
         surname: "Moyo",

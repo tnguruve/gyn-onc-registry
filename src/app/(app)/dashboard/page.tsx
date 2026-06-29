@@ -1,150 +1,193 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/auth";
-import { hasPermission } from "@/lib/permissions";
-import { calcDelays, median } from "@/lib/calculations";
-import { buildOverallSurvivalCurve, esgoQualityIndicators } from "@/lib/esgo-metrics";
-import { CANCER_TYPE, FIGO_STAGE, labelFor } from "@/lib/codes";
-import { SurvivalCurve } from "@/components/registry/survival-curve";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { buildDashboardMetrics, loadDashboardPatients } from "@/lib/dashboard-metrics";
+import { statusPill } from "@/lib/status-pills";
 
 export default async function DashboardPage() {
-  const user = await requireSession();
-
-  const patients = await prisma.patient.findMany({
-    include: {
-      referral: true,
-      diagnosis: true,
-      surgeries: true,
-      chemotherapies: true,
-      radiotherapy: true,
-      complications: true,
-      recurrence: true,
-      survival: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  const now = new Date();
-  const thisMonth = patients.filter(
-    (p) => p.createdAt.getMonth() === now.getMonth() && p.createdAt.getFullYear() === now.getFullYear(),
-  ).length;
-
-  const diagnosisDelays = patients
-    .map((p) => (p.referral ? calcDelays(p.referral).diagnosisDelayDays : null))
-    .filter((d): d is number => d != null);
-
-  const treatmentDelays = patients
-    .map((p) => (p.referral ? calcDelays(p.referral).treatmentDelayDays : null))
-    .filter((d): d is number => d != null);
-
-  const esgo = esgoQualityIndicators(patients);
-  const survivalCurve = buildOverallSurvivalCurve(patients);
-
-  const cervicalStages = patients
-    .filter((p) => p.diagnosis?.cancerType === "1")
-    .reduce<Record<string, number>>((acc, p) => {
-      const stage = p.diagnosis?.figoStage ?? "unknown";
-      acc[stage] = (acc[stage] ?? 0) + 1;
-      return acc;
-    }, {});
-
-  const recent = patients.slice(0, 5);
+  const patients = await loadDashboardPatients();
+  const metrics = buildDashboardMetrics(patients);
+  const { stats, registrations, diagnosisDistribution, recentPatients, tasks } = metrics;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Registry dashboard</h1>
-          <p className="text-sm text-slate-600">ESGO/SGO-style quality indicators · Parirenyatwa Gyn Onc Registry</p>
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-5">
+        <StatCard
+          label="Total patients"
+          value={stats.total}
+          delta={stats.newThisMonth > 0 ? `↑ ${stats.newThisMonth} this month` : "—"}
+          deltaColor={stats.newThisMonth > 0 ? "#1F8A5B" : "#7C8983"}
+          href="/patients"
+        />
+        <StatCard
+          label="In active treatment"
+          value={stats.inTreatment}
+          delta={stats.inTreatment > 0 ? "Currently on treatment" : "—"}
+          deltaColor="#7C8983"
+          href="/patients?filter=IN_TREATMENT"
+        />
+        <StatCard
+          label="MDT pending"
+          value={stats.mdtPending}
+          delta={stats.mdtPending > 0 ? "Awaiting board" : "All discussed"}
+          deltaColor={stats.mdtPending > 0 ? "#7A3B5E" : "#1F8A5B"}
+          href="/patients?filter=MDT_PENDING"
+        />
+        <StatCard
+          label="Follow-ups due"
+          value={stats.followUpsDue}
+          delta={stats.followUpsOverdue > 0 ? `${stats.followUpsOverdue} overdue` : "On schedule"}
+          deltaColor={stats.followUpsOverdue > 0 ? "#B23A48" : "#7C8983"}
+          href="/patients?filter=FOLLOW_UP"
+        />
+        <StatCard
+          label="Drafts"
+          value={stats.drafts}
+          delta={stats.drafts > 0 ? "Awaiting completion" : "None"}
+          deltaColor={stats.drafts > 0 ? "#9A6B17" : "#7C8983"}
+          href="/patients?filter=DRAFT"
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+        <div className="rounded-2xl border border-[#EAE5DA] bg-white p-5">
+          <div className="mb-5 flex items-baseline justify-between">
+            <div className="text-[15px] font-semibold">Registrations</div>
+            <div className="text-[12.5px] text-[#7C8983]">
+              Last 12 months · <span className="font-semibold text-[#0C4F4E]">{stats.total} total</span>
+            </div>
+          </div>
+          <div className="flex h-[150px] items-end gap-2">
+            {registrations.map((m) => (
+              <div key={m.label} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
+                <div
+                  className="chart-bar w-full max-w-[28px] rounded-t-[5px]"
+                  style={{ height: `${m.heightPct}%`, background: m.bg }}
+                  title={`${m.count} registrations`}
+                />
+                <div className="text-[11px] text-[#9aa5a0]">{m.label}</div>
+              </div>
+            ))}
+          </div>
         </div>
-        {hasPermission(user.role, "patients:create") && (
-          <Link href="/patients/new"><Button>Register patient</Button></Link>
-        )}
+
+        <div className="rounded-2xl border border-[#EAE5DA] bg-white p-5">
+          <div className="mb-4 text-[15px] font-semibold">Diagnosis distribution</div>
+          <div className="flex flex-col gap-3.5">
+            {diagnosisDistribution.map((d) => (
+              <Link
+                key={d.label}
+                href={`/patients?q=${encodeURIComponent(d.searchTerm)}`}
+                className="block transition-opacity hover:opacity-80"
+              >
+                <div className="mb-1.5 flex justify-between text-[13px]">
+                  <span>{d.label}</span>
+                  <span className="font-mono-data text-[#7C8983]">{d.pct}%</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded bg-[#F0ECE3]">
+                  <div className="h-full rounded" style={{ width: `${d.widthPct}%`, background: d.bg }} />
+                </div>
+              </Link>
+            ))}
+            {diagnosisDistribution.every((d) => d.count === 0) ? (
+              <p className="text-sm text-[#7C8983]">No diagnoses recorded yet.</p>
+            ) : null}
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Indicator title="Total cases" value={patients.length} />
-        <Indicator title="New cases this month" value={thisMonth} />
-        <Indicator title="Median diagnosis delay (days)" value={median(diagnosisDelays)} />
-        <Indicator title="Median treatment delay (days)" value={median(treatmentDelays)} />
-        <Indicator title="MDT discussion rate" value={esgo.mdtDiscussionRate != null ? `${esgo.mdtDiscussionRate}%` : "—"} />
-        <Indicator title="Median diagnosis → treatment (days)" value={esgo.medianDiagnosisToTreatmentDays} />
-        <Indicator title="Optimal debulking CC-0/1 (ovarian)" value={esgo.optimalDebulkingRate != null ? `${esgo.optimalDebulkingRate}%` : "—"} />
-        <Indicator title="Surgical complication rate" value={esgo.surgicalComplicationRate != null ? `${esgo.surgicalComplicationRate}%` : "—"} />
-        <Indicator title="Chemo completion rate" value={esgo.chemoCompletionRate != null ? `${esgo.chemoCompletionRate}%` : "—"} />
-        <Indicator title="RT completion rate" value={esgo.rtCompletionRate != null ? `${esgo.rtCompletionRate}%` : "—"} />
-        <Indicator title="Recurrence rate" value={esgo.recurrenceRate != null ? `${esgo.recurrenceRate}%` : "—"} />
-        <Indicator title="30-day mortality events" value={esgo.mortality30DayEvents} />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader><CardTitle>Overall survival curve</CardTitle></CardHeader>
-          <CardContent>
-            <SurvivalCurve data={survivalCurve} />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle>Cervical cancer — FIGO stage distribution</CardTitle></CardHeader>
-          <CardContent>
-            <ul className="space-y-2 text-sm">
-              {Object.entries(cervicalStages).map(([stage, count]) => (
-                <li key={stage} className="flex justify-between">
-                  <span>{labelFor(FIGO_STAGE, stage === "unknown" ? null : stage)}</span>
-                  <span className="font-medium">{count}</span>
-                </li>
-              ))}
-              {Object.keys(cervicalStages).length === 0 && <li className="text-slate-500">No cervical cases yet.</li>}
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader><CardTitle>Cancer site breakdown (disease-specific modules)</CardTitle></CardHeader>
-        <CardContent>
-          <ul className="grid gap-2 text-sm sm:grid-cols-2">
-            {CANCER_TYPE.map((c) => {
-              const count = patients.filter((p) => p.diagnosis?.cancerType === c.code).length;
+      <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+        <div className="rounded-2xl border border-[#EAE5DA] bg-white p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="text-[15px] font-semibold">Recent patients</div>
+            <Link href="/patients" className="text-[13px] text-[#7A3B5E]">
+              View all →
+            </Link>
+          </div>
+          <div className="flex flex-col">
+            {recentPatients.map((p) => {
+              const pill = statusPill(p.status);
               return (
-                <li key={c.code} className="flex justify-between rounded border border-slate-100 px-3 py-2">
-                  <span>{c.label}</span>
-                  <span className="font-medium">{count}</span>
-                </li>
+                <Link
+                  key={p.id}
+                  href={`/patients/${p.id}`}
+                  className="grid grid-cols-[1.4fr_1fr_.8fr_auto] items-center gap-2.5 border-b border-[#F0ECE3] px-2 py-3 transition hover:bg-[#FBFAF6]"
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#ECF3F2] text-xs font-semibold text-[#0C4F4E]">
+                      {p.name.split(" ").map((w) => w[0]).join("").slice(0, 2)}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate text-[13.5px] font-semibold">{p.name}</div>
+                      <div className="font-mono-data text-[11.5px] text-[#9aa5a0]">{p.displayId}</div>
+                    </div>
+                  </div>
+                  <div className="text-[13px] text-[#45524D]">{p.diagnosis}</div>
+                  <div className="text-[12.5px] text-[#7C8983]">{p.updated}</div>
+                  <span
+                    className="rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold whitespace-nowrap"
+                    style={{ background: pill.bg, color: pill.text }}
+                  >
+                    {pill.label}
+                  </span>
+                </Link>
               );
             })}
-          </ul>
-        </CardContent>
-      </Card>
+            {recentPatients.length === 0 ? (
+              <p className="py-8 text-center text-sm text-[#7C8983]">No patients yet. Register your first case.</p>
+            ) : null}
+          </div>
+        </div>
 
-      <Card>
-        <CardHeader><CardTitle>Recently registered</CardTitle></CardHeader>
-        <CardContent>
-          {recent.length === 0 ? (
-            <p className="text-sm text-slate-500">No patients yet.</p>
-          ) : (
-            <ul className="divide-y divide-slate-100">
-              {recent.map((p) => (
-                <li key={p.id} className="flex justify-between py-3 text-sm">
-                  <span>{p.registryNumber} — {p.surname}, {p.firstName}</span>
-                  <Link href={`/patients/${p.id}`} className="text-teal-700 underline">Open chart</Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+        <div className="rounded-2xl border border-[#EAE5DA] bg-white p-5">
+          <div className="mb-4 text-[15px] font-semibold">Tasks &amp; alerts</div>
+          <div className="flex flex-col gap-3">
+            {tasks.map((t) => (
+              <Link
+                key={t.title}
+                href={t.href}
+                className="flex gap-3 rounded-[10px] p-1.5 transition hover:bg-[#FBFAF6]"
+              >
+                <div
+                  className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg text-sm"
+                  style={{ background: t.bg, color: t.color }}
+                >
+                  {t.icon}
+                </div>
+                <div>
+                  <div className="text-[13px] leading-snug font-semibold">{t.title}</div>
+                  <div className="mt-0.5 text-xs text-[#7C8983]">{t.subtitle}</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-function Indicator({ title, value }: { title: string; value: string | number | null }) {
+function StatCard({
+  label,
+  value,
+  delta,
+  deltaColor,
+  href,
+}: {
+  label: string;
+  value: number;
+  delta: string;
+  deltaColor: string;
+  href: string;
+}) {
   return (
-    <Card>
-      <CardHeader><CardTitle className="text-sm font-medium text-slate-600">{title}</CardTitle></CardHeader>
-      <CardContent><p className="text-2xl font-semibold text-teal-800">{value ?? "—"}</p></CardContent>
-    </Card>
+    <Link
+      href={href}
+      className="card-hover rounded-[14px] border border-[#EAE5DA] bg-white px-4 py-4 transition"
+    >
+      <div className="mb-2.5 text-[12.5px] text-[#7C8983]">{label}</div>
+      <div className="font-display text-[30px] leading-none font-semibold">{value}</div>
+      <div className="mt-2 text-xs" style={{ color: deltaColor }}>
+        {delta}
+      </div>
+    </Link>
   );
 }

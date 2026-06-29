@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #d7d0c2; border-radius: 6px; border: 2px solid #F4F1EB; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  @keyframes rgIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  @keyframes rgFade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes rgGrow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+  input::placeholder, textarea::placeholder { color: #a7b0ab; }
+  .rg-input:focus { border-color: #0C4F4E !important; box-shadow: 0 0 0 4px rgba(12,79,78,.10) !important; }
+</style>
+</helmet>
+<div style="display: flex; height: 100vh; width: 100%; overflow: hidden; background: #F4F1EB; font-family: 'IBM Plex Sans', sans-serif; color: #1A2421;">
+
+  <!-- SIDEBAR -->
+  <aside style="width: 248px; flex-shrink: 0; background: linear-gradient(180deg, #0C4F4E 0%, #0A3C3D 100%); color: #EAF2F0; display: flex; flex-direction: column; padding: 22px 16px;">
+    <div style="display: flex; align-items: center; gap: 11px; padding: 6px 8px 22px;">
+      <div style="width: 34px; height: 34px; border-radius: 9px; border: 1.5px solid rgba(234,242,240,.5); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <div style="width: 13px; height: 13px; border-radius: 50%; border: 2px solid #EAF2F0; position: relative;">
+          <div style="position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #C98AAE; top: -3px; left: 50%; transform: translateX(-50%);"></div>
+        </div>
+      </div>
+      <div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 1.5px; font-weight: 500; white-space: nowrap;">GYN-ONC</div>
+        <div style="font-size: 11px; color: rgba(234,242,240,.55); letter-spacing: .5px; white-space: nowrap;">Registry</div>
+      </div>
+    </div>
+
+    <nav style="display: flex; flex-direction: column; gap: 3px; margin-top: 6px;">
+      <button onClick="{{ nv.dashboard.go }}" style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border-radius: 10px; border: none; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; text-align: left; transition: background .15s ease; background: {{ nv.dashboard.bg }}; color: {{ nv.dashboard.fg }}; font-weight: {{ nv.dashboard.fw }};"><span style="width: 20px; text-align: center; font-size: 15px; opacity: .9;">▦</span><span>Dashboard</span></button>
+      <button onClick="{{ nv.patients.go }}" style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border-radius: 10px; border: none; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; text-align: left; transition: background .15s ease; background: {{ nv.patients.bg }}; color: {{ nv.patients.fg }}; font-weight: {{ nv.patients.fw }};"><span style="width: 20px; text-align: center; font-size: 15px; opacity: .9;">❏</span><span>Patients</span><span style="margin-left: auto; background: #7A3B5E; color: #fff; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px;">7</span></button>
+      <button onClick="{{ nv.new.go }}" style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border-radius: 10px; border: none; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; text-align: left; transition: background .15s ease; background: {{ nv.new.bg }}; color: {{ nv.new.fg }}; font-weight: {{ nv.new.fw }};"><span style="width: 20px; text-align: center; font-size: 15px; opacity: .9;">＋</span><span>New patient</span></button>
+      <button onClick="{{ nv.builder.go }}" style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border-radius: 10px; border: none; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; text-align: left; transition: background .15s ease; background: {{ nv.builder.bg }}; color: {{ nv.builder.fg }}; font-weight: {{ nv.builder.fw }};"><span style="width: 20px; text-align: center; font-size: 15px; opacity: .9;">⚙</span><span>Module builder</span></button>
+      <button onClick="{{ nv.reports.go }}" style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border-radius: 10px; border: none; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; text-align: left; transition: background .15s ease; background: {{ nv.reports.bg }}; color: {{ nv.reports.fg }}; font-weight: {{ nv.reports.fw }};"><span style="width: 20px; text-align: center; font-size: 15px; opacity: .9;">▤</span><span>Reports</span></button>
+      <button onClick="{{ nv.exports.go }}" style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border-radius: 10px; border: none; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; text-align: left; transition: background .15s ease; background: {{ nv.exports.bg }}; color: {{ nv.exports.fg }}; font-weight: {{ nv.exports.fw }};"><span style="width: 20px; text-align: center; font-size: 15px; opacity: .9;">⤓</span><span>Export &amp; research</span></button>
+      <button onClick="{{ nv.admin.go }}" style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border-radius: 10px; border: none; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; text-align: left; transition: background .15s ease; background: {{ nv.admin.bg }}; color: {{ nv.admin.fg }}; font-weight: {{ nv.admin.fw }};"><span style="width: 20px; text-align: center; font-size: 15px; opacity: .9;">☷</span><span>Admin</span></button>
+    </nav>
+
+    <div style="margin-top: auto; border-top: 1px solid rgba(234,242,240,.14); padding-top: 14px; display: flex; align-items: center; gap: 11px;">
+      <div style="width: 34px; height: 34px; border-radius: 50%; background: #14807E; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0;">JM</div>
+      <div style="min-width: 0;">
+        <div style="font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Dr. J. Moyo</div>
+        <div style="font-size: 11.5px; color: rgba(234,242,240,.55);">Registry Clinician</div>
+      </div>
+      <a href="Welcome.dc.html" title="Sign out" style="margin-left: auto; color: rgba(234,242,240,.6); text-decoration: none; font-size: 16px;">⏻</a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div style="flex: 1; display: flex; flex-direction: column; min-width: 0;">
+
+    <!-- TOPBAR -->
+    <header style="height: 70px; flex-shrink: 0; border-bottom: 1px solid #E7E2D7; background: rgba(244,241,235,.82); backdrop-filter: blur(8px); display: flex; align-items: center; gap: 20px; padding: 0 32px;">
+      <div style="min-width: 0; overflow: hidden;">
+        <div style="font-family: 'Spectral', serif; font-size: 21px; font-weight: 600; line-height: 1.1; letter-spacing: -.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ pageTitle }}</div>
+        <div style="font-size: 12.5px; color: #7C8983; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ pageSub }}</div>
+      </div>
+
+      <div style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
+        <div style="position: relative; display: flex; align-items: center;">
+          <span style="position: absolute; left: 13px; color: #9aa5a0; font-size: 14px;">⌕</span>
+          <input value="{{ search }}" onInput="{{ onSearch }}" placeholder="Search patient ID, name, diagnosis…" class="rg-input" style="width: 320px; height: 40px; border: 1.5px solid #E2DDD3; border-radius: 10px; background: #fff; padding: 0 14px 0 36px; font-size: 13.5px; font-family: 'IBM Plex Sans', sans-serif; outline: none; transition: border-color .18s ease, box-shadow .18s ease;" />
+        </div>
+        <div style="display: flex; align-items: center; gap: 7px; height: 40px; padding: 0 13px; border: 1.5px solid #D5E4E2; background: #ECF3F2; border-radius: 10px; font-size: 12.5px; color: #0C4F4E; font-weight: 500;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #1F8A5B;"></span>{{ orgName }}
+        </div>
+        <button style="width: 40px; height: 40px; border: 1.5px solid #E2DDD3; background: #fff; border-radius: 10px; cursor: pointer; font-size: 15px; color: #45524D; position: relative;">⚲<span style="position: absolute; top: 8px; right: 9px; width: 7px; height: 7px; background: #7A3B5E; border-radius: 50%; border: 1.5px solid #fff;"></span></button>
+      </div>
+    </header>
+
+    <!-- CONTENT -->
+    <main style="flex: 1; overflow-y: auto; padding: 30px 32px 60px;">
+      <div style="max-width: 1120px; margin: 0 auto;">
+
+        <!-- ===== DASHBOARD ===== -->
+        <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+          <div data-screen-label="Dashboard" style="animation: rgFade .4s ease .02s forwards;">
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 22px;">
+              <sc-for list="{{ stats }}" as="s" hint-placeholder-count="5">
+                <button onClick="{{ s.onClick }}" style="text-align: left; width: 100%; background: #fff; border: 1px solid #EAE5DA; border-radius: 14px; padding: 16px 18px; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; transition: border-color .15s ease, transform .15s ease, box-shadow .2s ease;" style-hover="{{ cardHover }}">
+                  <div style="font-size: 12.5px; color: #7C8983; margin-bottom: 10px;">{{ s.label }}</div>
+                  <div style="font-family: 'Spectral', serif; font-size: 30px; font-weight: 600; line-height: 1;">{{ s.value }}</div>
+                  <div style="font-size: 12px; margin-top: 8px; color: {{ s.deltaColor }};">{{ s.delta }}</div>
+                </button>
+              </sc-for>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; margin-bottom: 16px;">
+              <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 16px; padding: 22px;">
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 20px;">
+                  <div style="font-weight: 600; font-size: 15px;">Registrations</div>
+                  <div style="font-size: 12.5px; color: #7C8983;">Last 12 months · <span style="color: #0C4F4E; font-weight: 600;">241 total</span></div>
+                </div>
+                <div style="display: flex; align-items: flex-end; gap: 10px; height: 150px;">
+                  <sc-for list="{{ months }}" as="m" hint-placeholder-count="12">
+                    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end;">
+                      <div style="width: 100%; max-width: 28px; height: {{ m.h }}; background: {{ m.bg }}; border-radius: 5px 5px 0 0; transform-origin: bottom; animation: rgGrow .5s ease .04s forwards;"></div>
+                      <div style="font-size: 11px; color: #9aa5a0;">{{ m.label }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 16px; padding: 22px;">
+                <div style="font-weight: 600; font-size: 15px; margin-bottom: 18px;">Diagnosis distribution</div>
+                <div style="display: flex; flex-direction: column; gap: 14px;">
+                  <sc-for list="{{ diagnoses }}" as="d" hint-placeholder-count="5">
+                    <button onClick="{{ d.onClick }}" style="text-align: left; width: 100%; background: none; border: none; padding: 0; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; transition: opacity .15s ease;" style-hover="{{ barHover }}">
+                      <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
+                        <span>{{ d.label }}</span><span style="color: #7C8983; font-family: 'IBM Plex Mono', monospace;">{{ d.pct }}</span>
+                      </div>
+                      <div style="height: 8px; background: #F0ECE3; border-radius: 4px; overflow: hidden;">
+                        <div style="height: 100%; width: {{ d.w }}; background: {{ d.bg }}; border-radius: 4px;"></div>
+                      </div>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px;">
+              <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 16px; padding: 22px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                  <div style="font-weight: 600; font-size: 15px;">Recent patients</div>
+                  <button onClick="{{ goPatients }}" style="background: none; border: none; color: #7A3B5E; font-size: 13px; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif;">View all →</button>
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                  <sc-for list="{{ recent }}" as="p" hint-placeholder-count="5">
+                    <button onClick="{{ p.open }}" style="display: grid; grid-template-columns: 1.4fr 1fr .8fr auto; align-items: center; gap: 10px; padding: 12px 8px; border: none; border-bottom: 1px solid #F0ECE3; background: none; cursor: pointer; text-align: left; font-family: 'IBM Plex Sans', sans-serif;">
+                      <div style="display: flex; align-items: center; gap: 11px; min-width: 0;">
+                        <div style="width: 32px; height: 32px; border-radius: 8px; background: #ECF3F2; color: #0C4F4E; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0;">{{ p.initials }}</div>
+                        <div style="min-width: 0;">
+                          <div style="font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ p.name }}</div>
+                          <div style="font-size: 11.5px; color: #9aa5a0; font-family: 'IBM Plex Mono', monospace;">{{ p.id }}</div>
+                        </div>
+                      </div>
+                      <div style="font-size: 13px; color: #45524D;">{{ p.diagnosis }}</div>
+                      <div style="font-size: 12.5px; color: #7C8983;">{{ p.updated }}</div>
+                      <span style="font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: {{ p.statusBg }}; color: {{ p.statusColor }}; white-space: nowrap;">{{ p.status }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 16px; padding: 22px;">
+                <div style="font-weight: 600; font-size: 15px; margin-bottom: 16px;">Tasks &amp; alerts</div>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                  <sc-for list="{{ tasks }}" as="t" hint-placeholder-count="4">
+                    <button onClick="{{ t.onClick }}" style="display: flex; gap: 12px; align-items: flex-start; text-align: left; width: calc(100% + 12px); margin: 0 -6px; background: none; border: none; padding: 6px; border-radius: 10px; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; transition: background .15s ease;" style-hover="{{ taskHover }}">
+                      <div style="width: 30px; height: 30px; border-radius: 8px; background: {{ t.bg }}; color: {{ t.color }}; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;">{{ t.icon }}</div>
+                      <div>
+                        <div style="font-size: 13px; font-weight: 600; line-height: 1.35;">{{ t.title }}</div>
+                        <div style="font-size: 12px; color: #7C8983; margin-top: 2px;">{{ t.sub }}</div>
+                      </div>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===== PATIENTS ===== -->
+        <sc-if value="{{ isPatients }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Patients" style="animation: rgFade .4s ease .02s forwards;">
+            <div style="display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; align-items: center;">
+              <button onClick="{{ flt.all.go }}" style="height: 40px; padding: 0 16px; border-radius: 10px; cursor: pointer; font-size: 13px; font-family: 'IBM Plex Sans', sans-serif; border: 1.5px solid {{ flt.all.bc }}; background: {{ flt.all.bg }}; color: {{ flt.all.fg }}; font-weight: {{ flt.all.fw }};">All patients</button>
+              <button onClick="{{ flt.treatment.go }}" style="height: 40px; padding: 0 16px; border-radius: 10px; cursor: pointer; font-size: 13px; font-family: 'IBM Plex Sans', sans-serif; border: 1.5px solid {{ flt.treatment.bc }}; background: {{ flt.treatment.bg }}; color: {{ flt.treatment.fg }}; font-weight: {{ flt.treatment.fw }};">In treatment</button>
+              <button onClick="{{ flt.mdt.go }}" style="height: 40px; padding: 0 16px; border-radius: 10px; cursor: pointer; font-size: 13px; font-family: 'IBM Plex Sans', sans-serif; border: 1.5px solid {{ flt.mdt.bc }}; background: {{ flt.mdt.bg }}; color: {{ flt.mdt.fg }}; font-weight: {{ flt.mdt.fw }};">MDT pending</button>
+              <button onClick="{{ flt.followup.go }}" style="height: 40px; padding: 0 16px; border-radius: 10px; cursor: pointer; font-size: 13px; font-family: 'IBM Plex Sans', sans-serif; border: 1.5px solid {{ flt.followup.bc }}; background: {{ flt.followup.bg }}; color: {{ flt.followup.fg }}; font-weight: {{ flt.followup.fw }};">Follow-up</button>
+              <button onClick="{{ goNew }}" style="margin-left: auto; height: 40px; padding: 0 18px; border: none; border-radius: 10px; background: #0C4F4E; color: #fff; font-size: 13.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; font-family: 'IBM Plex Sans', sans-serif;">＋ New patient</button>
+            </div>
+
+            <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 16px; overflow: hidden;">
+              <div style="display: grid; grid-template-columns: 1.5fr 1fr .7fr .8fr 1fr 1fr; gap: 12px; padding: 14px 22px; border-bottom: 1px solid #EAE5DA; font-size: 11.5px; font-weight: 600; letter-spacing: .4px; text-transform: uppercase; color: #9aa5a0;">
+                <div>Patient</div><div>Diagnosis</div><div>Stage</div><div>HIV</div><div>Status</div><div>Surgeon</div>
+              </div>
+              <sc-for list="{{ filteredPatients }}" as="p" hint-placeholder-count="7">
+                <button onClick="{{ p.open }}" style="width: 100%; display: grid; grid-template-columns: 1.5fr 1fr .7fr .8fr 1fr 1fr; gap: 12px; align-items: center; padding: 14px 22px; border: none; border-bottom: 1px solid #F4F0E8; background: none; cursor: pointer; text-align: left; font-family: 'IBM Plex Sans', sans-serif; transition: background .15s ease;" style-hover="{{ rowHover }}">
+                  <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+                    <div style="width: 36px; height: 36px; border-radius: 9px; background: #ECF3F2; color: #0C4F4E; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0;">{{ p.initials }}</div>
+                    <div style="min-width: 0;">
+                      <div style="font-size: 14px; font-weight: 600;">{{ p.name }}</div>
+                      <div style="font-size: 11.5px; color: #9aa5a0; font-family: 'IBM Plex Mono', monospace;">{{ p.id }} · {{ p.age }}y</div>
+                    </div>
+                  </div>
+                  <div style="font-size: 13.5px; color: #45524D;">{{ p.diagnosis }}</div>
+                  <div style="font-size: 13px; font-family: 'IBM Plex Mono', monospace; color: #45524D;">{{ p.stage }}</div>
+                  <div><span style="font-size: 11.5px; font-weight: 600; padding: 2px 9px; border-radius: 6px; background: {{ p.hivBg }}; color: {{ p.hivColor }};">{{ p.hiv }}</span></div>
+                  <div><span style="font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: {{ p.statusBg }}; color: {{ p.statusColor }}; white-space: nowrap;">{{ p.status }}</span></div>
+                  <div style="font-size: 13px; color: #45524D;">{{ p.surgeon }}</div>
+                </button>
+              </sc-for>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 22px; font-size: 12.5px; color: #7C8983;">
+                <span>Showing {{ filteredCount }} of 241 patients</span>
+                <div style="display: flex; gap: 6px;">
+                  <span style="width: 30px; height: 30px; border: 1px solid #E2DDD3; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: #0C4F4E; color: #fff;">1</span>
+                  <span style="width: 30px; height: 30px; border: 1px solid #E2DDD3; border-radius: 8px; display: flex; align-items: center; justify-content: center;">2</span>
+                  <span style="width: 30px; height: 30px; border: 1px solid #E2DDD3; border-radius: 8px; display: flex; align-items: center; justify-content: center;">3</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===== NEW PATIENT ===== -->
+        <sc-if value="{{ isNew }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="New patient" style="animation: rgFade .4s ease .02s forwards; max-width: 880px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: #1F8A5B; font-weight: 500;">
+                <span style="width: 7px; height: 7px; border-radius: 50%; background: #1F8A5B; animation: rgFade 1.2s ease infinite alternate;"></span>
+                Draft auto-saved · {{ autoSavedAt }}
+              </div>
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: #7C8983;">ID assigned: <span style="color: #0C4F4E; font-weight: 500;">GYN-0242</span></div>
+            </div>
+            <p style="font-size: 13px; color: #7C8983; margin: 0 0 24px;">Demographic &amp; baseline registration. Phone, email, address, emergency contact and next-of-kin are intentionally excluded per protocol.</p>
+
+            <sc-for list="{{ regGroups }}" as="g" hint-placeholder-count="3">
+              <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 16px; padding: 22px 24px; margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 18px;">
+                  <span style="width: 26px; height: 26px; border-radius: 7px; background: #ECF3F2; color: #0C4F4E; display: flex; align-items: center; justify-content: center; font-size: 13px;">{{ g.icon }}</span>
+                  <span style="font-weight: 600; font-size: 15px;">{{ g.title }}</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px 18px;">
+                  <sc-for list="{{ g.fields }}" as="fld" hint-placeholder-count="6">
+                    <div style="{{ fld.wrap }}">
+                      <label style="display: block; font-size: 12.5px; font-weight: 600; color: #45524D; margin-bottom: 7px;">{{ fld.label }}<span style="color: #B98; font-weight: 400;">{{ fld.opt }}</span></label>
+                      <sc-if value="{{ fld.isSelect }}" hint-placeholder-val="{{ false }}">
+                        <select onChange="{{ fld.onChange }}" data-field="{{ fld.name }}" class="rg-input" style="width: 100%; height: 44px; border: 1.5px solid #E2DDD3; border-radius: 10px; background: #fff; padding: 0 12px; font-size: 13.5px; font-family: 'IBM Plex Sans', sans-serif; color: #45524D; outline: none; transition: border-color .18s ease, box-shadow .18s ease;">
+                          <sc-for list="{{ fld.options }}" as="o" hint-placeholder-count="3">
+                            <option>{{ o }}</option>
+                          </sc-for>
+                        </select>
+                      </sc-if>
+                      <sc-if value="{{ fld.isStaticInput }}" hint-placeholder-val="{{ false }}">
+                        <input value="{{ fld.value }}" readonly="{{ true }}" class="rg-input" style="{{ fld.inputStyle }}" />
+                      </sc-if>
+                      <sc-if value="{{ fld.isEditInput }}" hint-placeholder-val="{{ true }}">
+                        <input type="{{ fld.type }}" data-field="{{ fld.name }}" placeholder="{{ fld.ph }}" onInput="{{ fld.onChange }}" readonly="{{ fld.readonly }}" class="rg-input" style="{{ fld.inputStyle }}" />
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+
+            <div style="display: flex; align-items: center; gap: 12px; margin-top: 22px;">
+              <button onClick="{{ savePatient }}" style="height: 48px; padding: 0 24px; border: none; border-radius: 11px; background: #0C4F4E; color: #fff; font-size: 14.5px; font-weight: 600; cursor: pointer; box-shadow: 0 10px 22px -12px rgba(12,79,78,.7); font-family: 'IBM Plex Sans', sans-serif;">Save &amp; open record</button>
+              <button style="height: 48px; padding: 0 22px; border: 1.5px solid #DDD7CB; border-radius: 11px; background: #fff; color: #1A2421; font-size: 14px; font-weight: 500; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif;">Save as draft</button>
+              <button onClick="{{ goPatients }}" style="height: 48px; padding: 0 18px; border: none; border-radius: 11px; background: none; color: #7C8983; font-size: 14px; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif;">Cancel</button>
+              <span style="margin-left: auto; font-size: 12px; color: #9aa5a0;">All edits recorded in audit trail</span>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===== PATIENT RECORD ===== -->
+        <sc-if value="{{ isRecord }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Patient record" style="animation: rgFade .4s ease .02s forwards;">
+            <button onClick="{{ goPatients }}" style="background: none; border: none; color: #7C8983; font-size: 13px; cursor: pointer; padding: 0; margin-bottom: 16px; font-family: 'IBM Plex Sans', sans-serif;">← All patients</button>
+
+            <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 16px; padding: 22px 24px; margin-bottom: 16px; display: flex; align-items: center; gap: 18px;">
+              <div style="width: 56px; height: 56px; border-radius: 13px; background: #ECF3F2; color: #0C4F4E; display: flex; align-items: center; justify-content: center; font-size: 19px; font-weight: 600; flex-shrink: 0;">{{ rec.initials }}</div>
+              <div>
+                <div style="font-family: 'Spectral', serif; font-size: 24px; font-weight: 600; line-height: 1.1;">{{ rec.name }}</div>
+                <div style="font-size: 13px; color: #7C8983; margin-top: 3px; font-family: 'IBM Plex Mono', monospace;">{{ rec.id }} · Hosp {{ rec.hosp }} · {{ rec.age }}y · {{ rec.diagnosis }} {{ rec.stage }}</div>
+              </div>
+              <div style="margin-left: auto; display: flex; gap: 8px;">
+                <span style="font-size: 11.5px; font-weight: 600; padding: 5px 12px; border-radius: 999px; background: {{ rec.statusBg }}; color: {{ rec.statusColor }};">{{ rec.status }}</span>
+                <span style="font-size: 11.5px; font-weight: 600; padding: 5px 12px; border-radius: 999px; background: {{ rec.hivBg }}; color: {{ rec.hivColor }};">{{ rec.hiv }}</span>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 300px; gap: 16px; align-items: start;">
+              <div>
+                <div style="display: flex; gap: 4px; flex-wrap: wrap; background: #fff; border: 1px solid #EAE5DA; border-radius: 12px; padding: 6px; margin-bottom: 16px;">
+                    <button onClick="{{ md.registration.go }}" style="padding: 8px 13px; border-radius: 8px; border: none; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; transition: background .15s ease; background: {{ md.registration.bg }}; color: {{ md.registration.fg }}; font-weight: {{ md.registration.fw }};">Registration<span style="color: #1F8A5B; margin-left: 5px;">{{ md.registration.check }}</span></button>
+                    <button onClick="{{ md.referral.go }}" style="padding: 8px 13px; border-radius: 8px; border: none; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; transition: background .15s ease; background: {{ md.referral.bg }}; color: {{ md.referral.fg }}; font-weight: {{ md.referral.fw }};">Referral<span style="color: #1F8A5B; margin-left: 5px;">{{ md.referral.check }}</span></button>
+                    <button onClick="{{ md.diagnosis.go }}" style="padding: 8px 13px; border-radius: 8px; border: none; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; transition: background .15s ease; background: {{ md.diagnosis.bg }}; color: {{ md.diagnosis.fg }}; font-weight: {{ md.diagnosis.fw }};">Diagnosis<span style="color: #1F8A5B; margin-left: 5px;">{{ md.diagnosis.check }}</span></button>
+                    <button onClick="{{ md.imaging.go }}" style="padding: 8px 13px; border-radius: 8px; border: none; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; transition: background .15s ease; background: {{ md.imaging.bg }}; color: {{ md.imaging.fg }}; font-weight: {{ md.imaging.fw }};">Imaging<span style="color: #1F8A5B; margin-left: 5px;">{{ md.imaging.check }}</span></button>
+                    <button onClick="{{ md.mdt.go }}" style="padding: 8px 13px; border-radius: 8px; border: none; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; transition: background .15s ease; background: {{ md.mdt.bg }}; color: {{ md.mdt.fg }}; font-weight: {{ md.mdt.fw }};">MDT<span style="color: #1F8A5B; margin-left: 5px;">{{ md.mdt.check }}</span></button>
+                    <button onClick="{{ md.surgery.go }}" style="padding: 8px 13px; border-radius: 8px; border: none; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; transition: background .15s ease; background: {{ md.surgery.bg }}; color: {{ md.surgery.fg }}; font-weight: {{ md.surgery.fw }};">Surgery<span style="color: #1F8A5B; margin-left: 5px;">{{ md.surgery.check }}</span></button>
+                    <button onClick="{{ md.pathology.go }}" style="padding: 8px 13px; border-radius: 8px; border: none; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; transition: background .15s ease; background: {{ md.pathology.bg }}; color: {{ md.pathology.fg }}; font-weight: {{ md.pathology.fw }};">Pathology<span style="color: #1F8A5B; margin-left: 5px;">{{ md.pathology.check }}</span></button>
+                    <button onClick="{{ md.treatment.go }}" style="padding: 8px 13px; border-radius: 8px; border: none; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; transition: background .15s ease; background: {{ md.treatment.bg }}; color: {{ md.treatment.fg }}; font-weight: {{ md.treatment.fw }};">Treatment<span style="color: #1F8A5B; margin-left: 5px;">{{ md.treatment.check }}</span></button>
+                    <button onClick="{{ md.complications.go }}" style="padding: 8px 13px; border-radius: 8px; border: none; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; transition: background .15s ease; background: {{ md.complications.bg }}; color: {{ md.complications.fg }}; font-weight: {{ md.complications.fw }};">Complications<span style="color: #1F8A5B; margin-left: 5px;">{{ md.complications.check }}</span></button>
+                    <button onClick="{{ md.followup.go }}" style="padding: 8px 13px; border-radius: 8px; border: none; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; transition: background .15s ease; background: {{ md.followup.bg }}; color: {{ md.followup.fg }}; font-weight: {{ md.followup.fw }};">Follow Up<span style="color: #1F8A5B; margin-left: 5px;">{{ md.followup.check }}</span></button>
+                    <button onClick="{{ md.outcomes.go }}" style="padding: 8px 13px; border-radius: 8px; border: none; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; transition: background .15s ease; background: {{ md.outcomes.bg }}; color: {{ md.outcomes.fg }}; font-weight: {{ md.outcomes.fw }};">Outcomes<span style="color: #1F8A5B; margin-left: 5px;">{{ md.outcomes.check }}</span></button>
+                </div>
+
+                <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 16px; padding: 24px;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                    <div style="font-family: 'Spectral', serif; font-size: 19px; font-weight: 600;">{{ activeModule.title }}</div>
+                    <button style="height: 34px; padding: 0 14px; border: 1.5px solid #DDD7CB; background: #fff; border-radius: 9px; font-size: 12.5px; font-weight: 600; cursor: pointer; color: #45524D; font-family: 'IBM Plex Sans', sans-serif;">Edit</button>
+                  </div>
+                  <p style="font-size: 12.5px; color: #9aa5a0; margin: 0 0 20px;">{{ activeModule.note }}</p>
+                  <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px 24px;">
+                    <sc-for list="{{ activeModule.rows }}" as="r" hint-placeholder-count="6">
+                      <div style="{{ r.wrap }}">
+                        <div style="font-size: 11.5px; font-weight: 600; letter-spacing: .3px; text-transform: uppercase; color: #9aa5a0; margin-bottom: 5px;">{{ r.k }}</div>
+                        <div style="font-size: 14.5px; color: #1A2421; line-height: 1.45;">{{ r.v }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 16px; padding: 18px 20px;">
+                  <div style="font-weight: 600; font-size: 14px; margin-bottom: 14px;">Audit trail</div>
+                  <div style="display: flex; flex-direction: column; gap: 0;">
+                    <sc-for list="{{ audit }}" as="a" hint-placeholder-count="4">
+                      <div style="display: flex; gap: 12px; padding-bottom: 16px; position: relative;">
+                        <div style="display: flex; flex-direction: column; align-items: center;">
+                          <span style="width: 9px; height: 9px; border-radius: 50%; background: {{ a.dot }}; margin-top: 4px; flex-shrink: 0;"></span>
+                          <span style="width: 1.5px; flex: 1; background: #EFE9DE;"></span>
+                        </div>
+                        <div style="padding-bottom: 4px;">
+                          <div style="font-size: 13px; line-height: 1.4;"><span style="font-weight: 600;">{{ a.who }}</span> {{ a.action }}</div>
+                          <div style="font-size: 11.5px; color: #9aa5a0; margin-top: 2px; font-family: 'IBM Plex Mono', monospace;">{{ a.when }}</div>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <button style="width: 100%; height: 36px; border: 1.5px solid #DDD7CB; background: #fff; border-radius: 9px; font-size: 12.5px; font-weight: 600; cursor: pointer; color: #45524D; font-family: 'IBM Plex Sans', sans-serif;">View full history</button>
+                </div>
+                <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 16px; padding: 18px 20px;">
+                  <div style="font-weight: 600; font-size: 14px; margin-bottom: 12px;">Completion</div>
+                  <div style="height: 9px; background: #F0ECE3; border-radius: 5px; overflow: hidden; margin-bottom: 10px;">
+                    <div style="height: 100%; width: 64%; background: linear-gradient(90deg, #14807E, #0C4F4E); border-radius: 5px;"></div>
+                  </div>
+                  <div style="font-size: 12.5px; color: #7C8983;">7 of 11 modules complete</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===== MODULE BUILDER ===== -->
+        <sc-if value="{{ isBuilder }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Module builder" style="animation: rgFade .4s ease .02s forwards;">
+            <div style="display: grid; grid-template-columns: 220px 1fr 280px; gap: 16px; align-items: start;">
+
+              <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 16px; padding: 18px;">
+                <div style="font-size: 11.5px; font-weight: 600; letter-spacing: .4px; text-transform: uppercase; color: #9aa5a0; margin-bottom: 14px;">Field types</div>
+                <div style="display: flex; flex-direction: column; gap: 7px;">
+                  <sc-for list="{{ palette }}" as="f" hint-placeholder-count="10">
+                    <button onClick="{{ f.add }}" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1.5px solid #ECE6DA; border-radius: 10px; background: #FBFAF6; cursor: pointer; font-size: 13px; font-weight: 500; color: #45524D; text-align: left; font-family: 'IBM Plex Sans', sans-serif; transition: border-color .15s ease;" style-hover="{{ paletteHover }}">
+                      <span style="width: 22px; height: 22px; border-radius: 6px; background: #ECF3F2; color: #0C4F4E; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0;">{{ f.icon }}</span>
+                      {{ f.label }}<span style="margin-left: auto; color: #C7BFAE; font-size: 15px;">＋</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 16px; padding: 24px; min-height: 440px;">
+                <input value="{{ builderName }}" onInput="{{ onBuilderName }}" class="rg-input" style="width: 100%; border: none; border-bottom: 2px solid #EFE9DE; font-family: 'Spectral', serif; font-size: 22px; font-weight: 600; padding: 0 0 10px; margin-bottom: 6px; outline: none; transition: border-color .18s ease;" />
+                <p style="font-size: 12.5px; color: #9aa5a0; margin: 0 0 22px;">Add fields from the palette. Drag to reorder. This module is a draft until saved as core.</p>
+
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                  <sc-for list="{{ canvasFields }}" as="c" hint-placeholder-count="3">
+                    <div style="display: flex; align-items: center; gap: 14px; border: 1.5px solid #ECE6DA; border-radius: 12px; padding: 14px 16px; background: #FCFBF8;">
+                      <span style="color: #C7BFAE; cursor: grab; font-size: 15px;">⠿</span>
+                      <span style="width: 30px; height: 30px; border-radius: 8px; background: #F3E9EF; color: #7A3B5E; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;">{{ c.icon }}</span>
+                      <div style="flex: 1; min-width: 0;">
+                        <div style="font-size: 14px; font-weight: 600;">{{ c.label }}</div>
+                        <div style="font-size: 11.5px; color: #9aa5a0; font-family: 'IBM Plex Mono', monospace;">{{ c.type }}{{ c.req }}</div>
+                      </div>
+                      <button onClick="{{ c.remove }}" style="width: 28px; height: 28px; border: none; background: #F4EFE7; border-radius: 7px; color: #B23A48; cursor: pointer; font-size: 14px;">✕</button>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ canvasEmpty }}" hint-placeholder-val="{{ false }}">
+                    <div style="border: 1.5px dashed #DDD6C8; border-radius: 12px; padding: 40px; text-align: center; color: #b3aa98; font-size: 13.5px;">No fields yet — add some from the left.</div>
+                  </sc-if>
+                </div>
+              </div>
+
+              <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 16px; padding: 20px;">
+                <div style="font-weight: 600; font-size: 14px; margin-bottom: 16px;">Save module</div>
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px;">
+                  <label style="display: flex; gap: 10px; align-items: flex-start; padding: 12px; border: 1.5px solid #D5E4E2; background: #ECF3F2; border-radius: 11px; cursor: pointer;">
+                    <input type="radio" name="savekind" checked="{{ true }}" style="margin-top: 2px; accent-color: #0C4F4E;" />
+                    <span><span style="font-size: 13.5px; font-weight: 600; display: block;">Permanent core module</span><span style="font-size: 12px; color: #5C6B66;">Added to the registry permanently. Included in reporting &amp; export.</span></span>
+                  </label>
+                  <label style="display: flex; gap: 10px; align-items: flex-start; padding: 12px; border: 1.5px solid #ECE6DA; border-radius: 11px; cursor: pointer;">
+                    <input type="radio" name="savekind" style="margin-top: 2px; accent-color: #0C4F4E;" />
+                    <span><span style="font-size: 13.5px; font-weight: 600; display: block;">Temporary module</span><span style="font-size: 12px; color: #5C6B66;">For this study only. Archivable later.</span></span>
+                  </label>
+                </div>
+                <button onClick="{{ saveModule }}" style="width: 100%; height: 46px; border: none; border-radius: 11px; background: #0C4F4E; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif;">Save module as core</button>
+                <div style="font-size: 11.5px; color: #9aa5a0; margin-top: 12px; line-height: 1.5;">Builder available to authorised users only. No developer required.</div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===== EXPORT & RESEARCH ===== -->
+        <sc-if value="{{ isExports }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Export and research" style="animation: rgFade .4s ease .02s forwards; max-width: 960px;">
+            <div style="display: grid; grid-template-columns: 1fr 320px; gap: 16px; align-items: start;">
+              <div>
+                <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 16px; padding: 24px; margin-bottom: 16px;">
+                  <div style="font-weight: 600; font-size: 15px; margin-bottom: 4px;">Export format</div>
+                  <p style="font-size: 12.5px; color: #9aa5a0; margin: 0 0 18px;">Select a format for the current cohort ({{ filteredCount }} records matched).</p>
+                  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                    <button onClick="{{ fmt.Excel.go }}" style="text-align: center; padding: 18px 12px; border-radius: 13px; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; color: #1A2421; transition: border-color .15s ease, background .15s ease; border: 1.5px solid {{ fmt.Excel.bc }}; background: {{ fmt.Excel.bg }};"><div style="font-size: 18px;">▦</div><div style="font-size: 14px; font-weight: 600; margin-top: 8px;">Excel</div><div style="font-size: 11.5px; color: #9aa5a0; font-family: 'IBM Plex Mono', monospace; margin-top: 2px;">.xlsx</div></button>
+                      <button onClick="{{ fmt.CSV.go }}" style="text-align: center; padding: 18px 12px; border-radius: 13px; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; color: #1A2421; transition: border-color .15s ease, background .15s ease; border: 1.5px solid {{ fmt.CSV.bc }}; background: {{ fmt.CSV.bg }};"><div style="font-size: 18px;">☰</div><div style="font-size: 14px; font-weight: 600; margin-top: 8px;">CSV</div><div style="font-size: 11.5px; color: #9aa5a0; font-family: 'IBM Plex Mono', monospace; margin-top: 2px;">.csv</div></button>
+                      <button onClick="{{ fmt.PDF.go }}" style="text-align: center; padding: 18px 12px; border-radius: 13px; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; color: #1A2421; transition: border-color .15s ease, background .15s ease; border: 1.5px solid {{ fmt.PDF.bc }}; background: {{ fmt.PDF.bg }};"><div style="font-size: 18px;">◰</div><div style="font-size: 14px; font-weight: 600; margin-top: 8px;">PDF</div><div style="font-size: 11.5px; color: #9aa5a0; font-family: 'IBM Plex Mono', monospace; margin-top: 2px;">.pdf</div></button>
+                      <button onClick="{{ fmt.SPSS.go }}" style="text-align: center; padding: 18px 12px; border-radius: 13px; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; color: #1A2421; transition: border-color .15s ease, background .15s ease; border: 1.5px solid {{ fmt.SPSS.bc }}; background: {{ fmt.SPSS.bg }};"><div style="font-size: 18px;">◈</div><div style="font-size: 14px; font-weight: 600; margin-top: 8px;">SPSS</div><div style="font-size: 11.5px; color: #9aa5a0; font-family: 'IBM Plex Mono', monospace; margin-top: 2px;">.sav</div></button>
+                      <button onClick="{{ fmt.Stata.go }}" style="text-align: center; padding: 18px 12px; border-radius: 13px; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; color: #1A2421; transition: border-color .15s ease, background .15s ease; border: 1.5px solid {{ fmt.Stata.bc }}; background: {{ fmt.Stata.bg }};"><div style="font-size: 18px;">◇</div><div style="font-size: 14px; font-weight: 600; margin-top: 8px;">Stata</div><div style="font-size: 11.5px; color: #9aa5a0; font-family: 'IBM Plex Mono', monospace; margin-top: 2px;">.dta</div></button>
+                      <button onClick="{{ fmt.JSON.go }}" style="text-align: center; padding: 18px 12px; border-radius: 13px; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; color: #1A2421; transition: border-color .15s ease, background .15s ease; border: 1.5px solid {{ fmt.JSON.bc }}; background: {{ fmt.JSON.bg }};"><div style="font-size: 18px;">{ }</div><div style="font-size: 14px; font-weight: 600; margin-top: 8px;">JSON</div><div style="font-size: 11.5px; color: #9aa5a0; font-family: 'IBM Plex Mono', monospace; margin-top: 2px;">.json</div></button>
+                  </div>
+                </div>
+
+                <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 16px; padding: 22px 24px;">
+                  <div style="font-weight: 600; font-size: 15px; margin-bottom: 16px;">Bulk upload historical records</div>
+                  <div style="border: 1.5px dashed #D5CFC0; border-radius: 13px; padding: 30px; text-align: center; background: #FBFAF6;">
+                    <div style="font-size: 26px; margin-bottom: 8px;">⤒</div>
+                    <div style="font-size: 14px; font-weight: 600;">Drop Excel or CSV file here</div>
+                    <div style="font-size: 12.5px; color: #9aa5a0; margin-top: 4px;">Map columns to registry fields after upload · .xlsx, .csv</div>
+                    <button style="margin-top: 16px; height: 40px; padding: 0 20px; border: 1.5px solid #DDD7CB; background: #fff; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; color: #45524D; font-family: 'IBM Plex Sans', sans-serif;">Browse files</button>
+                  </div>
+                </div>
+              </div>
+
+              <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 16px; padding: 22px;">
+                <div style="font-weight: 600; font-size: 15px; margin-bottom: 16px;">Options</div>
+                <label style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid #F0ECE3; cursor: pointer;">
+                  <span><span style="font-size: 13.5px; font-weight: 600; display: block;">De-identify for research</span><span style="font-size: 12px; color: #7C8983;">Strip names &amp; identifiers</span></span>
+                  <span onClick="{{ toggleDeident }}" style="width: 42px; height: 24px; border-radius: 999px; position: relative; flex-shrink: 0; transition: background .2s ease; cursor: pointer; display: inline-block; background: {{ deidentBg }};"><span style="position: absolute; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: left .2s ease; box-shadow: 0 1px 3px rgba(0,0,0,.2); left: {{ deidentLeft }};"></span></span>
+                </label>
+                <div style="padding: 16px 0; font-size: 13px; color: #45524D; line-height: 1.7;">
+                  <div style="display: flex; justify-content: space-between;"><span style="color: #7C8983;">Cohort</span><span style="font-weight: 600;">Current filter</span></div>
+                  <div style="display: flex; justify-content: space-between;"><span style="color: #7C8983;">Records</span><span style="font-weight: 600;">{{ filteredCount }}</span></div>
+                  <div style="display: flex; justify-content: space-between;"><span style="color: #7C8983;">Modules</span><span style="font-weight: 600;">All 11 + custom</span></div>
+                  <div style="display: flex; justify-content: space-between;"><span style="color: #7C8983;">Format</span><span style="font-weight: 600;">{{ selectedFormat }}</span></div>
+                </div>
+                <button onClick="{{ runExport }}" style="width: 100%; height: 46px; border: none; border-radius: 11px; background: #0C4F4E; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; box-shadow: 0 10px 22px -12px rgba(12,79,78,.7);">{{ exportLabel }}</button>
+                <div style="font-size: 11.5px; color: #9aa5a0; margin-top: 12px; line-height: 1.5;">Export logged in audit trail with user, time &amp; record count.</div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===== REPORTS ===== -->
+        <sc-if value="{{ isReports }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Reports" style="animation: rgFade .4s ease .02s forwards;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 18px;">
+              <button onClick="{{ prd.month.go }}" style="height: 40px; padding: 0 18px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13.5px; font-family: 'IBM Plex Sans', sans-serif; border: 1.5px solid {{ prd.month.bc }}; background: {{ prd.month.bg }}; color: {{ prd.month.fg }};">Monthly</button>
+              <button onClick="{{ prd.year.go }}" style="height: 40px; padding: 0 18px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13.5px; font-family: 'IBM Plex Sans', sans-serif; border: 1.5px solid {{ prd.year.bc }}; background: {{ prd.year.bg }}; color: {{ prd.year.fg }};">Annual</button>
+              <button style="margin-left: auto; height: 40px; padding: 0 18px; border: none; border-radius: 10px; background: #0C4F4E; color: #fff; font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif;">⤓ Generate PDF report</button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 16px;">
+              <sc-for list="{{ reportStats }}" as="s" hint-placeholder-count="4">
+                <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 14px; padding: 18px;">
+                  <div style="font-size: 12.5px; color: #7C8983; margin-bottom: 10px;">{{ s.label }}</div>
+                  <div style="font-family: 'Spectral', serif; font-size: 28px; font-weight: 600;">{{ s.value }}</div>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 16px; padding: 22px;">
+                <div style="font-weight: 600; font-size: 15px; margin-bottom: 18px;">Stage at diagnosis</div>
+                <div style="display: flex; flex-direction: column; gap: 14px;">
+                  <sc-for list="{{ stageDist }}" as="d" hint-placeholder-count="4">
+                    <div>
+                      <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;"><span>{{ d.label }}</span><span style="color: #7C8983; font-family: 'IBM Plex Mono', monospace;">{{ d.pct }}</span></div>
+                      <div style="height: 8px; background: #F0ECE3; border-radius: 4px; overflow: hidden;"><div style="height: 100%; width: {{ d.w }}; background: {{ d.bg }};"></div></div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 16px; padding: 22px;">
+                <div style="font-weight: 600; font-size: 15px; margin-bottom: 16px;">Outcomes summary</div>
+                <div style="display: flex; flex-direction: column; gap: 13px;">
+                  <sc-for list="{{ outcomes }}" as="o" hint-placeholder-count="4">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid #F0ECE3;">
+                      <span style="font-size: 13.5px; color: #45524D;">{{ o.label }}</span>
+                      <span style="font-size: 14px; font-weight: 600; font-family: 'IBM Plex Mono', monospace; color: {{ o.color }};">{{ o.value }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===== ADMIN ===== -->
+        <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Admin" style="animation: rgFade .4s ease .02s forwards;">
+            <div style="display: grid; grid-template-columns: 1fr 320px; gap: 16px; align-items: start;">
+              <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 16px; padding: 22px 24px;">
+                <div style="font-weight: 600; font-size: 15px; margin-bottom: 18px;">Roles &amp; permissions</div>
+                <div style="display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid #EAE5DA; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; color: #9aa5a0;">
+                  <div>Role</div><div>View</div><div>Edit</div><div>Export</div>
+                </div>
+                <sc-for list="{{ roles }}" as="r" hint-placeholder-count="4">
+                  <div style="display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 10px; padding: 14px 0; border-bottom: 1px solid #F4F0E8; align-items: center;">
+                    <div><div style="font-size: 14px; font-weight: 600;">{{ r.name }}</div><div style="font-size: 12px; color: #9aa5a0;">{{ r.count }} users</div></div>
+                    <div style="font-size: 16px; color: {{ r.viewC }};">{{ r.view }}</div>
+                    <div style="font-size: 16px; color: {{ r.editC }};">{{ r.edit }}</div>
+                    <div style="font-size: 16px; color: {{ r.exportC }};">{{ r.export }}</div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 16px; padding: 20px;">
+                  <div style="font-weight: 600; font-size: 14px; margin-bottom: 14px;">Automated backups</div>
+                  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                    <span style="width: 9px; height: 9px; border-radius: 50%; background: #1F8A5B;"></span>
+                    <span style="font-size: 13px; font-weight: 600;">Healthy</span>
+                    <span style="margin-left: auto; font-size: 12px; color: #9aa5a0;">Last: 04:00 today</span>
+                  </div>
+                  <div style="font-size: 12.5px; color: #7C8983; line-height: 1.6;">Daily encrypted snapshot · 30-day retention · off-site replica enabled.</div>
+                </div>
+                <div style="background: #fff; border: 1px solid #EAE5DA; border-radius: 16px; padding: 20px;">
+                  <div style="font-weight: 600; font-size: 14px; margin-bottom: 14px;">Recent system audit</div>
+                  <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <sc-for list="{{ sysAudit }}" as="a" hint-placeholder-count="4">
+                      <div style="font-size: 12.5px; line-height: 1.4;"><span style="font-weight: 600;">{{ a.who }}</span> <span style="color: #5C6B66;">{{ a.what }}</span><div style="font-size: 11px; color: #9aa5a0; font-family: 'IBM Plex Mono', monospace; margin-top: 1px;">{{ a.when }}</div></div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- TOAST -->
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: #1A2421; color: #fff; padding: 13px 22px; border-radius: 12px; font-size: 13.5px; font-weight: 500; box-shadow: 0 16px 40px -12px rgba(0,0,0,.4); display: flex; align-items: center; gap: 10px; animation: rgIn .35s ease .02s forwards; z-index: 50;">
+      <span style="color: #5FD0A0;">✓</span>{{ toast }}
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: &quot;100%&quot;, &quot;height&quot;: &quot;100%&quot;}, &quot;orgName&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;Parirenyatwa Group of Hospitals&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Content&quot;}, &quot;defaultRoute&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;dashboard&quot;, &quot;options&quot;: [&quot;dashboard&quot;, &quot;patients&quot;, &quot;new&quot;, &quot;record&quot;, &quot;builder&quot;, &quot;reports&quot;, &quot;exports&quot;, &quot;admin&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Behavior&quot;}}">
+class Component extends DCLogic {
+  state = {
+    route: (this.props && this.props.defaultRoute) || 'dashboard',
+    selected: 0,
+    search: '',
+    filter: 'all',
+    activeMod: 'diagnosis',
+    builderName: 'Recurrence tracking',
+    canvas: [
+      { id: 1, type: 'text', icon: 'T', label: 'Recurrence site', req: ' · required' },
+      { id: 2, type: 'date', icon: '▤', label: 'Date detected', req: '' },
+      { id: 3, type: 'dropdown', icon: '▾', label: 'Detection method', req: '' },
+    ],
+    nextId: 4,
+    formats: { Excel: true, CSV: false, PDF: false, SPSS: false, Stata: false, JSON: false },
+    selFormat: 'Excel',
+    deident: true,
+    period: 'month',
+    toast: '',
+    form: {},
+    savedAt: 'just now',
+  };
+
+  PATIENTS = [
+    { id: 'GYN-0242', hosp: '884531', name: 'Privilege M.', age: 44, diagnosis: 'Ovarian', stage: 'IC', status: 'Draft', surgeon: 'Dr. Ncube', hiv: 'Neg', updated: 'just now' },
+    { id: 'GYN-0241', hosp: '884512', name: 'Tanaka M.', age: 54, diagnosis: 'Cervical', stage: 'IIB', status: 'In treatment', surgeon: 'Dr. Sibanda', hiv: 'Pos', updated: '2d ago' },
+    { id: 'GYN-0238', hosp: '884490', name: 'Rumbidzai C.', age: 47, diagnosis: 'Ovarian', stage: 'IIIC', status: 'MDT pending', surgeon: 'Dr. Moyo', hiv: 'Neg', updated: '5h ago' },
+    { id: 'GYN-0235', hosp: '884455', name: 'Chipo N.', age: 61, diagnosis: 'Endometrial', stage: 'IA', status: 'Follow-up', surgeon: 'Dr. Sibanda', hiv: 'Neg', updated: '1d ago' },
+    { id: 'GYN-0233', hosp: '884401', name: 'Farai D.', age: 38, diagnosis: 'GTD', stage: '—', status: 'Surveillance', surgeon: 'Dr. Ncube', hiv: 'Pos', updated: '3d ago' },
+    { id: 'GYN-0230', hosp: '884398', name: 'Nyasha K.', age: 66, diagnosis: 'Vulval', stage: 'II', status: 'Surgery booked', surgeon: 'Dr. Moyo', hiv: 'Neg', updated: '6d ago' },
+    { id: 'GYN-0228', hosp: '884370', name: 'Memory T.', age: 52, diagnosis: 'Cervical', stage: 'IIIB', status: 'In treatment', surgeon: 'Dr. Sibanda', hiv: 'Pos', updated: '1w ago' },
+  ];
+
+  statusStyle(s) {
+    const m = {
+      'Draft': ['#F4F0E8', '#8A7E66'], 'In treatment': ['#FBEFD9', '#9A6B17'],
+      'MDT pending': ['#F3E9EF', '#7A3B5E'], 'Follow-up': ['#E7F1EE', '#0C5C4E'],
+      'Surveillance': ['#EAF0F6', '#3A5A8A'], 'Surgery booked': ['#FBEAEC', '#B23A48'],
+    };
+    return m[s] || ['#F0ECE3', '#5C6B66'];
+  }
+
+  initials(name) { return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(); }
+
+  nav(route) { this.setState({ route }); if (typeof location !== 'undefined') { try { location.hash = route; } catch (e) {} } }
+
+  flash(msg) { this.setState({ toast: msg }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 2600); }
+
+  nowStr() { try { return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch (e) { return 'just now'; } }
+
+  calcAge(v) {
+    if (!v) return '';
+    const d = new Date(v); if (isNaN(d.getTime())) return '';
+    const now = new Date();
+    let a = now.getFullYear() - d.getFullYear();
+    const m = now.getMonth() - d.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < d.getDate())) a--;
+    return (a >= 0 && a < 130) ? String(a) : '';
+  }
+
+  onField(name, value) {
+    const form = { ...this.state.form, [name]: value };
+    if (name === 'date_of_birth') {
+      const age = this.calcAge(value);
+      form.age = age;
+      try { const el = document.querySelector('input[data-field="age"]'); if (el) el.value = age; } catch (e) {}
+    }
+    this.setState({ form, savedAt: this.nowStr() });
+  }
+
+  paintNav() {
+    try {
+      const order = ['dashboard','patients','new','builder','reports','exports','admin'];
+      const activeKey = this.state.route === 'record' ? 'patients' : this.state.route;
+      const btns = document.querySelectorAll('aside nav button');
+      btns.forEach((b, i) => {
+        const on = order[i] === activeKey;
+        b.style.background = on ? 'rgba(234,242,240,.14)' : 'transparent';
+        b.style.color = on ? '#fff' : 'rgba(234,242,240,.72)';
+        b.style.fontWeight = on ? '600' : '500';
+      });
+    } catch (e) {}
+  }
+
+  componentDidUpdate() { this.paintNav(); }
+
+  componentDidMount() {
+    const valid = ['dashboard','patients','new','record','builder','reports','exports','admin'];
+    const h = (location.hash || '').replace('#', '');
+    if (valid.includes(h)) this.setState({ route: h });
+    this._hl = () => { const x = (location.hash || '').replace('#',''); if (valid.includes(x)) this.setState({ route: x }); };
+    window.addEventListener('hashchange', this._hl);
+    this.paintNav();
+  }
+  componentWillUnmount() { window.removeEventListener('hashchange', this._hl); clearTimeout(this._t); }
+
+  renderVals() {
+    const s = this.state;
+    const titles = {
+      dashboard: ['Dashboard', 'Overview of registry activity'],
+      patients: ['Patients', '241 registered · 7 shown'],
+      new: ['New patient registration', 'Demographic & baseline data'],
+      record: ['Patient record', 'Clinical modules & history'],
+      builder: ['Module builder', 'Create custom registry modules — no code'],
+      reports: ['Reports', 'Monthly & annual reporting'],
+      exports: ['Export & research', 'Generate datasets & bulk upload'],
+      admin: ['Admin', 'Roles, backups & system audit'],
+    };
+    const [pageTitle, pageSub] = titles[s.route] || titles.dashboard;
+
+    const navItems = [
+      { key: 'dashboard', label: 'Dashboard', icon: '▦' },
+      { key: 'patients', label: 'Patients', icon: '❏' },
+      { key: 'new', label: 'New patient', icon: '＋' },
+      { key: 'builder', label: 'Module builder', icon: '⚙' },
+      { key: 'reports', label: 'Reports', icon: '▤' },
+      { key: 'exports', label: 'Export & research', icon: '⤓' },
+      { key: 'admin', label: 'Admin', icon: '☷' },
+    ].map(n => {
+      const active = s.route === n.key || (n.key === 'patients' && s.route === 'record');
+      return {
+        ...n,
+        go: () => this.nav(n.key),
+        badge: n.key === 'patients' ? '7' : '',
+        badgeDisplay: n.key === 'patients' ? 'inline-block' : 'none',
+        bg: active ? 'rgba(234,242,240,.14)' : 'transparent',
+        fg: active ? '#fff' : 'rgba(234,242,240,.72)',
+        fw: active ? 600 : 500,
+      };
+    });
+
+    const mkPatient = (p, i) => {
+      const [statusBg, statusColor] = this.statusStyle(p.status);
+      const hivPos = p.hiv === 'Pos';
+      return {
+        ...p, initials: this.initials(p.name), statusBg, statusColor,
+        hivBg: hivPos ? '#F3E9EF' : '#EEF1EC', hivColor: hivPos ? '#7A3B5E' : '#5C6B66',
+        open: () => { this.setState({ selected: i, route: 'record', activeMod: 'diagnosis' }); try { location.hash = 'record'; } catch (e) {} },
+      };
+    };
+    const patients = this.PATIENTS.map(mkPatient);
+    const q = s.search.trim().toLowerCase();
+    let filtered = patients;
+    if (q) filtered = filtered.filter(p => (p.name + ' ' + p.id + ' ' + p.diagnosis + ' ' + p.surgeon).toLowerCase().includes(q));
+    if (s.filter === 'treatment') filtered = filtered.filter(p => p.status === 'In treatment');
+    if (s.filter === 'mdt') filtered = filtered.filter(p => p.status === 'MDT pending');
+    if (s.filter === 'followup') filtered = filtered.filter(p => p.status === 'Follow-up');
+
+    const goFilter = (f) => { this.setState({ filter: f, route: 'patients', search: '' }); try { location.hash = 'patients'; } catch (e) {} };
+    const goSearch = (term) => { this.setState({ search: term, route: 'patients', filter: 'all' }); try { location.hash = 'patients'; } catch (e) {} };
+
+    const stats = [
+      { label: 'Total patients', value: '241', delta: '↑ 18 this month', deltaColor: '#1F8A5B', onClick: () => goFilter('all') },
+      { label: 'In active treatment', value: '63', delta: '↑ 4 this week', deltaColor: '#1F8A5B', onClick: () => goFilter('treatment') },
+      { label: 'MDT pending', value: '7', delta: 'Next board Thu', deltaColor: '#7C8983', onClick: () => goFilter('mdt') },
+      { label: 'Follow-ups due', value: '12', delta: '3 overdue', deltaColor: '#B23A48', onClick: () => goFilter('followup') },
+      { label: 'Custom modules', value: '5', delta: '2 awaiting review', deltaColor: '#7C8983', onClick: () => this.nav('builder') },
+    ];
+
+    const mh = [40, 52, 47, 60, 55, 72, 64, 80, 70, 88, 76, 95];
+    const months = ['J','F','M','A','M','J','J','A','S','O','N','D'].map((label, i) => ({
+      label, h: mh[i] + '%', bg: i === 11 ? '#0C4F4E' : '#9DC4C1',
+    }));
+
+    const diagnoses = [
+      { label: 'Cervical', pct: '48%', w: '48%', bg: '#0C4F4E', onClick: () => goSearch('Cervical') },
+      { label: 'Ovarian', pct: '22%', w: '22%', bg: '#14807E', onClick: () => goSearch('Ovarian') },
+      { label: 'Endometrial', pct: '16%', w: '16%', bg: '#7A3B5E', onClick: () => goSearch('Endometrial') },
+      { label: 'Vulval / Vaginal', pct: '8%', w: '8%', bg: '#C98AAE', onClick: () => goSearch('Vulval') },
+      { label: 'GTD', pct: '6%', w: '6%', bg: '#D8B23A', onClick: () => goSearch('GTD') },
+    ];
+
+    const tasks = [
+      { icon: '◷', bg: '#F3E9EF', color: '#7A3B5E', title: 'MDT board — 7 cases to review', sub: 'Thursday, 08:00 · Pre-theatre discussion', onClick: () => goFilter('mdt') },
+      { icon: '!', bg: '#FBEAEC', color: '#B23A48', title: '3 follow-ups overdue', sub: 'Chipo N., Memory T. +1', onClick: () => goFilter('followup') },
+      { icon: '✎', bg: '#FBEFD9', color: '#9A6B17', title: '2 drafts awaiting completion', sub: 'Saved registrations · resume editing', onClick: () => goFilter('all') },
+      { icon: '⤓', bg: '#E7F1EE', color: '#0C5C4E', title: 'Monthly export ready', sub: 'June 2026 cohort · 18 records', onClick: () => this.nav('exports') },
+    ];
+
+    const recent = patients.slice(0, 5);
+
+    // Patient record
+    const rp = this.PATIENTS[s.selected] || this.PATIENTS[0];
+    const [rsBg, rsColor] = this.statusStyle(rp.status);
+    const rhivPos = rp.hiv === 'Pos';
+    const rec = {
+      ...rp, initials: this.initials(rp.name), statusBg: rsBg, statusColor: rsColor,
+      hiv: rhivPos ? 'HIV positive' : 'HIV negative',
+      hivBg: rhivPos ? '#F3E9EF' : '#EEF1EC', hivColor: rhivPos ? '#7A3B5E' : '#5C6B66',
+    };
+
+    const moduleList = [
+      { key: 'registration', label: 'Registration', done: true },
+      { key: 'referral', label: 'Referral', done: true },
+      { key: 'diagnosis', label: 'Diagnosis', done: true },
+      { key: 'imaging', label: 'Imaging', done: true },
+      { key: 'mdt', label: 'MDT', done: true },
+      { key: 'surgery', label: 'Surgery', done: true },
+      { key: 'pathology', label: 'Pathology', done: true },
+      { key: 'treatment', label: 'Treatment', done: false },
+      { key: 'complications', label: 'Complications', done: false },
+      { key: 'followup', label: 'Follow Up', done: false },
+      { key: 'outcomes', label: 'Outcomes', done: false },
+    ];
+    const modules = moduleList.map(m => {
+      const active = s.activeMod === m.key;
+      return { ...m, go: () => this.setState({ activeMod: m.key }),
+        check: m.done ? '✓' : '',
+        bg: active ? '#0C4F4E' : 'transparent',
+        fg: active ? '#fff' : '#5C6B66',
+        fw: active ? 600 : 500 };
+    });
+
+    const w2 = { gridColumn: 'span 2' };
+    const MOD_CONTENT = {
+      registration: { title: 'Patient Registration', note: 'No phone, email, address, emergency contact or next-of-kin captured (per protocol).', rows: [
+        { k: 'Province', v: 'Harare' }, { k: 'District', v: 'Harare Central' },
+        { k: 'Occupation', v: 'Teacher' }, { k: 'Marital status', v: 'Married' },
+        { k: 'Education', v: 'Tertiary' }, { k: 'Date registered', v: '12 Mar 2026' },
+      ] },
+      referral: { title: 'Referral History', note: 'Source and pathway into the service.', rows: [
+        { k: 'Referred from', v: 'Chitungwiza Central Hospital' }, { k: 'Referral date', v: '04 Mar 2026' },
+        { k: 'Reason', v: 'Abnormal cervical screening' }, { k: 'Priority', v: 'Urgent (2-week)' },
+      ] },
+      diagnosis: { title: 'Diagnosis', note: 'Includes GTD. Excludes GTN per registry scope.', rows: [
+        { k: 'Primary site', v: rp.diagnosis }, { k: 'FIGO stage', v: rp.stage },
+        { k: 'Histology', v: 'Squamous cell carcinoma' }, { k: 'Grade', v: 'Moderately differentiated (G2)' },
+        { k: 'Date of diagnosis', v: '11 Mar 2026' }, { k: 'ECOG', v: '1' },
+      ] },
+      imaging: { title: 'Imaging', note: 'Staging & surveillance imaging.', rows: [
+        { k: 'Modality', v: 'MRI pelvis + CT chest/abdomen' }, { k: 'Date', v: '13 Mar 2026' },
+        { k: 'Nodal status', v: 'No suspicious nodes' }, { k: 'Metastasis', v: 'None identified' },
+      ] },
+      mdt: { title: 'MDT', note: 'Single pre-theatre discussion only.', rows: [
+        { k: 'Board date', v: '18 Mar 2026' }, { k: 'Decision', v: 'Proceed to chemoradiation' },
+        { k: 'Chair', v: 'Dr. Sibanda' }, { k: 'Recommendation', v: 'EBRT + concurrent cisplatin, then brachytherapy' },
+      ] },
+      surgery: { title: 'Surgery', note: 'Operative details.', rows: [
+        { k: 'Procedure', v: 'Examination under anaesthesia' }, { k: 'Date', v: '20 Mar 2026' },
+        { k: 'Surgeon', v: rp.surgeon }, { k: 'Blood loss', v: '50 ml' },
+      ] },
+      pathology: { title: 'Pathology', note: 'No tumour markers, no IHC section (per protocol).', rows: [
+        { k: 'Specimen', v: 'Cervical biopsy' }, { k: 'Tumour size', v: '34 mm' },
+        { k: 'Margins', v: 'Not applicable (biopsy)' }, { k: 'Lymphovascular invasion', v: 'Present' },
+      ] },
+      treatment: { title: 'Treatment', note: 'Systemic & radiation therapy.', rows: [
+        { k: 'Regimen', v: 'Chemoradiation' }, { k: 'Status', v: 'Cycle 2 of 5' },
+        { k: 'Started', v: '25 Mar 2026' }, { k: 'Radiotherapy', v: 'EBRT 45 Gy / 25 #' },
+      ] },
+      complications: { title: 'Complications', note: 'Treatment-related toxicity & events.', rows: [
+        { k: 'Recorded', v: 'Grade 2 diarrhoea' }, { k: 'Management', v: 'Supportive, ongoing' },
+      ] },
+      followup: { title: 'Follow Up', note: 'Surveillance schedule.', rows: [
+        { k: 'Next visit', v: 'Due — schedule pending' }, { k: 'Interval', v: '3-monthly (year 1)' },
+      ] },
+      outcomes: { title: 'Outcomes', note: 'Disease status & survival endpoints.', rows: [
+        { k: 'Disease status', v: 'On treatment' }, { k: 'Vital status', v: 'Alive' },
+      ] },
+    };
+    const am = MOD_CONTENT[s.activeMod] || MOD_CONTENT.diagnosis;
+    const activeModule = { title: am.title, note: am.note, rows: am.rows.map((r, i) => ({ ...r, wrap: (am.rows.length % 2 === 1 && i === am.rows.length - 1) ? w2 : {} })) };
+
+    const audit = [
+      { who: 'Dr. J. Moyo', action: 'updated Diagnosis · FIGO stage', when: 'Today 09:42', dot: '#0C4F4E' },
+      { who: 'Dr. Sibanda', action: 'recorded MDT decision', when: '18 Mar 14:05', dot: '#7A3B5E' },
+      { who: 'N. Phiri', action: 'attached MRI report', when: '13 Mar 11:20', dot: '#14807E' },
+      { who: 'System', action: 'auto-saved draft', when: '12 Mar 16:00', dot: '#C7BFAE' },
+    ];
+
+    // New patient form
+    const inputBase = {
+      width: '100%', height: '44px', border: '1.5px solid #E2DDD3', borderRadius: '10px',
+      background: '#fff', padding: '0 12px', fontSize: '13.5px',
+      fontFamily: "'IBM Plex Sans', sans-serif", color: '#1A2421', outline: 'none',
+      transition: 'border-color .18s ease, box-shadow .18s ease',
+    };
+    const roInput = { ...inputBase, background: '#F7F4EE', color: '#7C8983' };
+    const fld = (label, opt, ph, extra) => {
+      extra = extra || {};
+      const name = extra.name || label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+      const ro = !!extra.readonly;
+      const isSelect = !!extra.options;
+      const staticVal = (ro && !extra.computed) ? (extra.val || '') : undefined;
+      return {
+        label, opt: opt || '', ph: extra.computed ? '—' : (ph || ''), name,
+        type: extra.type || 'text',
+        isInput: !isSelect, isSelect, options: extra.options || [],
+        isStaticInput: !isSelect && ro && !extra.computed,
+        isEditInput: !isSelect && !(ro && !extra.computed),
+        readonly: ro, value: staticVal,
+        inputStyle: ro ? roInput : inputBase,
+        onChange: (e) => this.onField(name, e.target.value),
+        wrap: extra.full ? w2 : {},
+      };
+    };
+    const regGroups = [
+      { title: 'Identity', icon: '◉', fields: [
+        fld('Patient ID', '', '', { val: 'GYN-0242', readonly: true }),
+        fld('Hospital number', '', 'e.g. 884531'),
+        fld('National ID', ' · optional', 'XX-XXXXXXX-X-XX'),
+        fld('Date registered', '', '', { val: '29 Jun 2026', readonly: true }),
+        fld('First name', '', 'First name'),
+        fld('Surname', '', 'Surname'),
+        fld('Phone number', ' · optional', 'e.g. +263 77 123 4567'),
+      ] },
+      { title: 'Demographics', icon: '⌖', fields: [
+        fld('Date of birth', '', 'dd/mm/yyyy', { type: 'date' }),
+        fld('Age', ' · calculated', '', { readonly: true, computed: true }),
+        fld('Province', '', '', { options: ['Select…', 'Harare', 'Bulawayo', 'Manicaland', 'Mashonaland East', 'Masvingo', 'Midlands'] }),
+        fld('District', '', 'District'),
+        fld('Occupation', '', 'Occupation'),
+        fld('Marital status', '', '', { options: ['Select…', 'Single', 'Married', 'Widowed', 'Divorced'] }),
+        fld('Education', '', '', { options: ['Select…', 'None', 'Primary', 'Secondary', 'Tertiary'] }),
+      ] },
+      { title: 'Clinical baseline', icon: '✛', fields: [
+        fld('HIV status', '', '', { options: ['Select…', 'Negative', 'Positive', 'Unknown'] }),
+        fld('ART status', '', '', { options: ['Select…', 'On ART', 'Not on ART', 'N/A'] }),
+        fld('CD4 count', ' · cells/mm³', 'e.g. 540'),
+        fld('Viral load', ' · copies/mL', 'e.g. Undetectable'),
+        fld('ECOG score', '', '', { options: ['Select…', '0', '1', '2', '3', '4'] }),
+        fld('BMI', ' · kg/m²', 'e.g. 24.6'),
+      ] },
+    ];
+
+    // Builder
+    const ICONS = { text: 'T', 'long text': '¶', number: '#', date: '▤', dropdown: '▾', checkbox: '☑', radio: '◉', boolean: '⇄', 'file upload': '⤒', calculated: 'ƒ' };
+    const palette = ['text','long text','number','date','dropdown','checkbox','radio','boolean','file upload','calculated'].map(t => ({
+      label: t.charAt(0).toUpperCase() + t.slice(1), icon: ICONS[t],
+      add: () => this.setState(st => ({ canvas: [...st.canvas, { id: st.nextId, type: t, icon: ICONS[t], label: 'New ' + t + ' field', req: '' }], nextId: st.nextId + 1 })),
+    }));
+    const canvasFields = s.canvas.map(c => ({ ...c, remove: () => this.setState(st => ({ canvas: st.canvas.filter(x => x.id !== c.id) })) }));
+
+    // Exports
+    const fmtMeta = { Excel: '.xlsx', CSV: '.csv', PDF: '.pdf', SPSS: '.sav', Stata: '.dta', JSON: '.json' };
+    const fmtIcon = { Excel: '▦', CSV: '☰', PDF: '◰', SPSS: '◈', Stata: '◇', JSON: '{ }' };
+    const formats = Object.keys(fmtMeta).map(k => {
+      const sel = s.selFormat === k;
+      return { label: k, ext: fmtMeta[k], icon: fmtIcon[k], go: () => this.setState({ selFormat: k }),
+        bc: sel ? '#0C4F4E' : '#ECE6DA',
+        bg: sel ? '#ECF3F2' : '#FBFAF6' };
+    });
+    const deidentBg = s.deident ? '#0C4F4E' : '#D7D0C2';
+    const deidentLeft = s.deident ? '21px' : '3px';
+
+    // Reports
+    const periods = [['month','Monthly'], ['year','Annual']].map(([k, label]) => {
+      const active = s.period === k;
+      return { key: k, label, go: () => this.setState({ period: k }),
+        bg: active ? '#0C4F4E' : '#fff',
+        bc: active ? '#0C4F4E' : '#E2DDD3',
+        fg: active ? '#fff' : '#45524D' };
+    });
+    const isMonth = s.period === 'month';
+    const reportStats = [
+      { label: 'New registrations', value: isMonth ? '18' : '241' },
+      { label: 'Surgeries', value: isMonth ? '9' : '128' },
+      { label: 'MDT cases', value: isMonth ? '24' : '276' },
+      { label: 'Deaths recorded', value: isMonth ? '2' : '31' },
+    ];
+    const stageDist = [
+      { label: 'Stage I', pct: '28%', w: '28%', bg: '#14807E' },
+      { label: 'Stage II', pct: '31%', w: '31%', bg: '#0C4F4E' },
+      { label: 'Stage III', pct: '27%', w: '27%', bg: '#7A3B5E' },
+      { label: 'Stage IV', pct: '14%', w: '14%', bg: '#B23A48' },
+    ];
+    const outcomes = [
+      { label: 'Alive, no evidence of disease', value: '54%', color: '#1F8A5B' },
+      { label: 'Alive with disease', value: '29%', color: '#9A6B17' },
+      { label: 'Deceased', value: '13%', color: '#B23A48' },
+      { label: 'Lost to follow-up', value: '4%', color: '#7C8983' },
+    ];
+
+    // Admin
+    const roles = [
+      { name: 'Administrator', count: 3, view: '✓', edit: '✓', export: '✓', viewC: '#1F8A5B', editC: '#1F8A5B', exportC: '#1F8A5B' },
+      { name: 'Clinician', count: 14, view: '✓', edit: '✓', export: '✓', viewC: '#1F8A5B', editC: '#1F8A5B', exportC: '#1F8A5B' },
+      { name: 'Data entry', count: 8, view: '✓', edit: '✓', export: '✕', viewC: '#1F8A5B', editC: '#1F8A5B', exportC: '#C7BFAE' },
+      { name: 'Researcher', count: 6, view: '✓', edit: '✕', export: '✓', viewC: '#1F8A5B', editC: '#C7BFAE', exportC: '#1F8A5B' },
+    ];
+    const sysAudit = [
+      { who: 'M. Chari', what: 'exported de-identified cohort (231)', when: 'Today 10:15' },
+      { who: 'Dr. Moyo', what: 'saved “Recurrence tracking” as core', when: 'Today 09:02' },
+      { who: 'System', what: 'completed nightly backup', when: 'Today 04:00' },
+      { who: 'T. Banda', what: 'updated Clinician permissions', when: 'Yesterday 16:30' },
+    ];
+
+    const filterDefs = [['all','All patients'], ['treatment','In treatment'], ['mdt','MDT pending'], ['followup','Follow-up']];
+    const filters = filterDefs.map(([k, label]) => {
+      const active = s.filter === k;
+      return { key: k, label, go: () => this.setState({ filter: k }),
+        bg: active ? '#0C4F4E' : '#fff',
+        bc: active ? '#0C4F4E' : '#E2DDD3',
+        fg: active ? '#fff' : '#45524D',
+        fw: active ? 600 : 500 };
+    });
+    const flt = Object.fromEntries(filters.map(f => [f.key, f]));
+    const nv = Object.fromEntries(navItems.map(n => [n.key, n]));
+    const prd = Object.fromEntries(periods.map(p => [p.key, p]));
+    const fmt = Object.fromEntries(formats.map(f => [f.label, f]));
+    const md = Object.fromEntries(modules.map(m => [m.key, m]));
+
+    return {
+      orgName: (this.props && this.props.orgName) || 'Parirenyatwa Group of Hospitals',
+      pageTitle, pageSub, nv,
+      search: s.search, onSearch: (e) => this.setState({ search: e.target.value }),
+      isDashboard: s.route === 'dashboard', isPatients: s.route === 'patients',
+      isNew: s.route === 'new', isRecord: s.route === 'record', isBuilder: s.route === 'builder',
+      isReports: s.route === 'reports', isExports: s.route === 'exports', isAdmin: s.route === 'admin',
+      goPatients: () => this.nav('patients'), goNew: () => this.nav('new'),
+      stats, months, diagnoses, tasks, recent,
+      cardHover: { borderColor: '#0C4F4E', transform: 'translateY(-2px)', boxShadow: '0 12px 26px -16px rgba(12,79,78,.5)' },
+      taskHover: { background: '#FBFAF6' },
+      barHover: { opacity: 0.8 },
+      flt, filteredPatients: filtered, filteredCount: filtered.length,
+      rowHover: { background: '#FBFAF6' },
+      autoSavedAt: s.savedAt,
+      regGroups, savePatient: () => { const nm = ((s.form.first_name || '') + ' ' + (s.form.surname || '')).trim(); this.setState({ selected: 0, route: 'record', activeMod: 'registration' }); this.flash('Patient ' + (nm ? nm + ' · ' : '') + 'GYN-0242 saved & record opened'); },
+      rec, md, activeModule, audit,
+      palette, canvasFields, canvasEmpty: s.canvas.length === 0,
+      builderName: s.builderName, onBuilderName: (e) => this.setState({ builderName: e.target.value }),
+      paletteHover: { borderColor: '#0C4F4E' },
+      saveModule: () => this.flash('“' + s.builderName + '” saved as permanent core module'),
+      fmt, selectedFormat: s.selFormat, exportLabel: 'Export ' + filtered.length + ' records · ' + s.selFormat,
+      runExport: () => this.flash('Export queued · ' + s.selFormat + (s.deident ? ' (de-identified)' : '')),
+      deident: s.deident, toggleDeident: () => this.setState(st => ({ deident: !st.deident })), deidentBg, deidentLeft,
+      prd, reportStats, stageDist, outcomes,
+      roles, sysAudit,
+      toast: s.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>

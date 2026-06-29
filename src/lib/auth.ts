@@ -108,9 +108,9 @@ export async function generateRegistryNumber(): Promise<string> {
 
   let next = 1;
   if (latest?.registryNumber) {
-    const num = Number(latest.registryNumber.replace(/^GYN/i, ""));
+    const num = Number(latest.registryNumber.replace(/^GYN-?/i, ""));
     if (!Number.isNaN(num)) next = num + 1;
   }
 
-  return `GYN${String(next).padStart(4, "0")}`;
+  return `GYN-${String(next).padStart(4, "0")}`;
 }
