@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useCallback, useEffect, useState } from "react";
+import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { loginAction, signupAction, type AuthFormState } from "@/app/actions";
 import { WelcomeBrandPanel } from "@/components/auth/welcome-brand-panel";
@@ -20,10 +20,18 @@ export function AuthFlow({ error, initialMode = "signup" }: { error?: string; in
     error && initialMode === "login" ? { error } : null,
   );
 
+  const formRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const urlMode = searchParams.get("mode") === "login" ? "login" : "signup";
     setMode(urlMode);
   }, [searchParams]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches) {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [mode]);
 
   const switchMode = useCallback(
     (next: Mode) => {
@@ -33,16 +41,19 @@ export function AuthFlow({ error, initialMode = "signup" }: { error?: string; in
     [router],
   );
 
-  const modeToggle = <AuthModeToggle mode={mode} onSwitch={switchMode} variant="on-brand" />;
+  const headerAuth = <AuthModeToggle mode={mode} onSwitch={switchMode} variant="header-pill" />;
   const modeToggleDesktop = (
     <AuthModeToggle mode={mode} onSwitch={switchMode} variant="on-paper" className="mb-8 hidden lg:flex" />
   );
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-[#F4F1EB] lg:flex-row lg:overflow-hidden">
-      <WelcomeBrandPanel mobileAuthTabs={modeToggle} />
+      <WelcomeBrandPanel headerAuthTabs={headerAuth} />
 
-      <div className="relative flex flex-1 items-start justify-center px-4 py-6 sm:px-8 sm:py-10 lg:items-center lg:p-10">
+      <div
+        ref={formRef}
+        className="relative flex flex-1 scroll-mt-2 items-start justify-center px-4 py-6 sm:px-8 sm:py-10 lg:scroll-mt-0 lg:items-center lg:p-10"
+      >
         <div className="w-full max-w-[400px]">
           {modeToggleDesktop}
 
@@ -164,9 +175,34 @@ function AuthModeToggle({
 }: {
   mode: Mode;
   onSwitch: (mode: Mode) => void;
-  variant: "on-brand" | "on-paper";
+  variant: "on-brand" | "on-paper" | "header-pill";
   className?: string;
 }) {
+  if (variant === "header-pill") {
+    return (
+      <div className={`flex rounded-[10px] bg-white p-1 shadow-[0_4px_14px_-6px_rgba(0,0,0,0.35)] ${className}`}>
+        <button
+          type="button"
+          onClick={() => onSwitch("signup")}
+          className={`rounded-[8px] px-2.5 py-1.5 text-[11px] font-semibold transition sm:px-3 sm:text-xs ${
+            mode === "signup" ? "bg-[#0C4F4E] text-white" : "text-[#5C6B66]"
+          }`}
+        >
+          Sign up
+        </button>
+        <button
+          type="button"
+          onClick={() => onSwitch("login")}
+          className={`rounded-[8px] px-2.5 py-1.5 text-[11px] font-semibold transition sm:px-3 sm:text-xs ${
+            mode === "login" ? "bg-[#0C4F4E] text-white" : "text-[#5C6B66]"
+          }`}
+        >
+          Log in
+        </button>
+      </div>
+    );
+  }
+
   const isBrand = variant === "on-brand";
   return (
     <div
