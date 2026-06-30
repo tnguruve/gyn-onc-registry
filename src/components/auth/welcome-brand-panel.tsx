@@ -79,7 +79,7 @@ function WelcomeBrandPanelInner({ headerAuthTabs }: WelcomeBrandPanelProps) {
 
       <div className="welcome-stagger-item relative flex items-start justify-between gap-3" style={{ animationDelay: "0.06s" }}>
         <BrandLogo />
-        {headerAuthTabs ? <div className="shrink-0 lg:hidden">{headerAuthTabs}</div> : null}
+        {headerAuthTabs ? <div className="shrink-0">{headerAuthTabs}</div> : null}
       </div>
 
       <div className="relative my-6 lg:my-0">

@@ -22,7 +22,7 @@ export default async function LoginPage({
   if (session) redirect("/dashboard");
 
   const params = await searchParams;
-  const initialMode = params.mode === "login" ? "login" : "signup";
+  const initialMode = params.mode === "signup" ? "signup" : "login";
 
   return (
     <Suspense fallback={null}>
