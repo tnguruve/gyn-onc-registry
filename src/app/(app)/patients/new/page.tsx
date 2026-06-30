@@ -31,6 +31,12 @@ export default async function NewPatientPage({
         </p>
       </div>
 
+      <div className="rounded-lg border border-[#D5E4E2] bg-[#ECF3F2] px-4 py-3 text-sm text-[#45524D]">
+        <strong className="text-[#0C4F4E]">After you save:</strong> Modules 2–13 (referral, diagnosis, MDT,
+        imaging, surgery, pathology, treatment, follow-up, and more) are completed on the{" "}
+        <strong>patient record</strong> — open the new case from Patients to continue.
+      </div>
+
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {decodeURIComponent(error)}
