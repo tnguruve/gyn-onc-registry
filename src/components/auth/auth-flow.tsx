@@ -21,6 +21,7 @@ export function AuthFlow({ error, initialMode = "signup" }: { error?: string; in
   );
 
   const formRef = useRef<HTMLDivElement>(null);
+  const skipScrollRef = useRef(true);
 
   useEffect(() => {
     const urlMode = searchParams.get("mode") === "login" ? "login" : "signup";
@@ -28,6 +29,10 @@ export function AuthFlow({ error, initialMode = "signup" }: { error?: string; in
   }, [searchParams]);
 
   useEffect(() => {
+    if (skipScrollRef.current) {
+      skipScrollRef.current = false;
+      return;
+    }
     if (typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches) {
       formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
