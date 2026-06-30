@@ -33,32 +33,18 @@ export function AuthFlow({ error, initialMode = "signup" }: { error?: string; in
     [router],
   );
 
-  return (
-    <div className="flex min-h-[100dvh] flex-col lg:flex-row lg:overflow-hidden">
-      <WelcomeBrandPanel />
+  const modeToggle = <AuthModeToggle mode={mode} onSwitch={switchMode} variant="on-brand" />;
+  const modeToggleDesktop = (
+    <AuthModeToggle mode={mode} onSwitch={switchMode} variant="on-paper" className="mb-8 hidden lg:flex" />
+  );
 
-      <div className="relative flex flex-1 items-center justify-center px-4 py-8 sm:px-8 sm:py-10 lg:p-10">
+  return (
+    <div className="flex min-h-[100dvh] flex-col bg-[#F4F1EB] lg:flex-row lg:overflow-hidden">
+      <WelcomeBrandPanel mobileAuthTabs={modeToggle} />
+
+      <div className="relative flex flex-1 items-start justify-center px-4 py-6 sm:px-8 sm:py-10 lg:items-center lg:p-10">
         <div className="w-full max-w-[400px]">
-          <div className="mb-8 flex rounded-xl border border-[#E2DDD3] bg-[#FAF8F4] p-1">
-            <button
-              type="button"
-              onClick={() => switchMode("signup")}
-              className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition ${
-                mode === "signup" ? "bg-white text-[#0C4F4E] shadow-sm" : "text-[#5C6B66]"
-              }`}
-            >
-              Create account
-            </button>
-            <button
-              type="button"
-              onClick={() => switchMode("login")}
-              className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition ${
-                mode === "login" ? "bg-white text-[#0C4F4E] shadow-sm" : "text-[#5C6B66]"
-              }`}
-            >
-              Log in
-            </button>
-          </div>
+          {modeToggleDesktop}
 
           {mode === "signup" ? (
             <SignupForm action={signupFormAction} error={signupState?.error} pending={signupPending} />
@@ -166,6 +152,60 @@ function ErrorBox({ message }: { message: string }) {
   return (
     <div className="rounded-[9px] border border-[#F2D6D6] bg-[#FBEEEE] px-3.5 py-2.5 text-[13px] text-[#B23A48]">
       {message}
+    </div>
+  );
+}
+
+function AuthModeToggle({
+  mode,
+  onSwitch,
+  variant,
+  className = "",
+}: {
+  mode: Mode;
+  onSwitch: (mode: Mode) => void;
+  variant: "on-brand" | "on-paper";
+  className?: string;
+}) {
+  const isBrand = variant === "on-brand";
+  return (
+    <div
+      className={`flex rounded-xl p-1 ${
+        isBrand
+          ? "border border-[rgba(234,242,240,0.22)] bg-[rgba(0,0,0,0.14)] backdrop-blur-sm"
+          : "border border-[#E2DDD3] bg-[#FAF8F4]"
+      } ${className}`}
+    >
+      <button
+        type="button"
+        onClick={() => onSwitch("signup")}
+        className={`flex-1 rounded-lg py-3 text-sm font-semibold transition ${
+          mode === "signup"
+            ? isBrand
+              ? "bg-white text-[#0C4F4E] shadow-sm"
+              : "bg-white text-[#0C4F4E] shadow-sm"
+            : isBrand
+              ? "text-[rgba(234,242,240,0.85)]"
+              : "text-[#5C6B66]"
+        }`}
+      >
+        Create account
+      </button>
+      <button
+        type="button"
+        onClick={() => onSwitch("login")}
+        className={`flex-1 rounded-lg py-3 text-sm font-semibold transition ${
+          mode === "login"
+            ? isBrand
+              ? "bg-white text-[#0C4F4E] shadow-sm"
+              : "bg-white text-[#0C4F4E] shadow-sm"
+            : isBrand
+              ? "text-[rgba(234,242,240,0.85)]"
+              : "text-[#5C6B66]"
+        }`}
+      >
+        Log in
+      </button>
     </div>
   );
 }
