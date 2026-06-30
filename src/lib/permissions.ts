@@ -10,17 +10,18 @@ export type Permission =
   | "reports:read"
   | "export:deidentified"
   | "admin:users"
-  | "admin:audit";
+  | "admin:audit"
+  | "modules:manage";
 
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ADMIN: [
     "patients:read", "patients:create", "patients:edit", "patients:delete",
     "clinical:read", "clinical:write", "reports:read",
-    "export:deidentified", "admin:users", "admin:audit",
+    "export:deidentified", "admin:users", "admin:audit", "modules:manage",
   ],
   CLINICIAN: [
     "patients:read", "patients:create", "patients:edit", "patients:delete",
-    "clinical:read", "clinical:write", "reports:read",
+    "clinical:read", "clinical:write", "reports:read", "modules:manage",
   ],
   FRONT_DESK: ["patients:read", "patients:create", "patients:edit", "patients:delete"],
   RESEARCHER: ["patients:read", "clinical:read", "reports:read", "export:deidentified", "patients:delete"],

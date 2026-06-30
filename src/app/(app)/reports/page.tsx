@@ -43,7 +43,7 @@ export default async function ReportsPage() {
             </div>
           </form>
           <p className="mt-4 text-xs text-slate-500">
-            1=Cervix · 2=Ovary · 3=Endometrium · 4=Vulva · 5=Vagina · 6=GTD
+            1=Cervix · 2=Ovary · 3=Endometrium · 4=Vulva · 5=Vagina · 6=GTD · 7=GTN
           </p>
         </CardContent>
       </Card>

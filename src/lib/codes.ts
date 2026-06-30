@@ -55,7 +55,8 @@ export const CANCER_TYPE: CodeOption[] = [
   { code: "3", label: "Endometrium" },
   { code: "4", label: "Vulva" },
   { code: "5", label: "Vagina" },
-  { code: "6", label: "Gestational trophoblastic disease" },
+  { code: "6", label: "GTD (gestational trophoblastic disease)" },
+  { code: "7", label: "GTN (gestational trophoblastic neoplasia)" },
 ];
 
 export const HISTOLOGY: CodeOption[] = [
@@ -89,6 +90,14 @@ export const FIGO_STAGE: CodeOption[] = [
   { code: "11", label: "IVA" },
   { code: "12", label: "IVB" },
   { code: "13", label: "Unknown" },
+];
+
+export const MDT_MEETING_TYPE: CodeOption[] = [
+  { code: "1", label: "Initial — pre-theatre" },
+  { code: "2", label: "Rediscussion" },
+  { code: "3", label: "Post-operative / pathology review" },
+  { code: "4", label: "Recurrence / progression" },
+  { code: "5", label: "Other" },
 ];
 
 export const REFERRAL_SOURCE: CodeOption[] = [

@@ -99,6 +99,15 @@ export async function seedRegistry(prisma: PrismaClient) {
       },
     });
 
+    await prisma.mdtMeeting.create({
+      data: {
+        patientId: patient.id,
+        meetingDate: new Date("2025-10-28"),
+        meetingType: "1",
+        summary: "Primary plan: radical hysterectomy and adjuvant chemoradiation",
+      },
+    });
+
     await prisma.imaging.create({
       data: { patientId: patient.id, ultrasoundDone: true, ctDone: true, tumorSizeMm: 45 },
     });
@@ -122,6 +131,10 @@ export async function seedRegistry(prisma: PrismaClient) {
         positiveNodes: 2,
         lvsi: true,
         marginStatus: "1",
+        p53: "2",
+        p16: "1",
+        ca125: 78.5,
+        betaHcg: null,
       },
     });
 

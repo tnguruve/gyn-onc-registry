@@ -1,10 +1,36 @@
-export default function ModuleBuilderPage() {
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/db";
+import { requireSession } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
+import { ModuleBuilder } from "@/components/registry/module-builder";
+
+export const dynamic = "force-dynamic";
+
+export default async function ModuleBuilderPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ module?: string; saved?: string; deleted?: string }>;
+}) {
+  const user = await requireSession();
+  if (!hasPermission(user.role, "modules:manage")) {
+    redirect("/dashboard");
+  }
+
+  const params = await searchParams;
+  const modules = await prisma.customModule.findMany({
+    include: {
+      fields: { orderBy: { sortOrder: "asc" } },
+      _count: { select: { patientData: true } },
+    },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+
   return (
-    <div className="rounded-2xl border border-dashed border-[#D5E4E2] bg-white p-12 text-center">
-      <h2 className="font-display mb-2 text-2xl font-semibold">Module builder</h2>
-      <p className="mx-auto max-w-md text-sm text-[#5C6B66]">
-        Custom module builder is planned for v2. Core registry modules are available in each patient record.
-      </p>
-    </div>
+    <ModuleBuilder
+      modules={modules}
+      selectedId={params.module}
+      saved={params.saved === "1"}
+      deleted={params.deleted === "1"}
+    />
   );
 }

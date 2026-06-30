@@ -16,6 +16,7 @@ const CANCER_LABELS: Record<string, string> = {
   "4": "Vulval / Vaginal",
   "5": "Vulval / Vaginal",
   "6": "GTD",
+  "7": "GTN",
 };
 
 const CANCER_COLORS: Record<string, string> = {
@@ -25,6 +26,7 @@ const CANCER_COLORS: Record<string, string> = {
   "4": "#C98AAE",
   "5": "#C98AAE",
   "6": "#D8B23A",
+  "7": "#B8860B",
 };
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -36,6 +38,7 @@ export async function loadDashboardPatients() {
     include: {
       referral: true,
       diagnosis: true,
+      mdtMeetings: true,
       surgeries: true,
       followUps: true,
     },

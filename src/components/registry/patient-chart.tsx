@@ -3,7 +3,9 @@ import {
   addChemotherapyAction,
   addComplicationAction,
   addFollowUpAction,
+  addMdtMeetingAction,
   addSurgeryAction,
+  deleteMdtMeetingAction,
   saveDiagnosisAction,
   saveHistopathologyAction,
   saveImagingAction,
@@ -15,7 +17,11 @@ import {
   updateDemographicsAction,
 } from "@/app/actions";
 import { DeletePatientButton } from "@/components/registry/delete-patient-button";
+import { CustomModulePatientCard, type CustomModuleForPatient } from "@/components/registry/custom-module-patient-card";
 import { ModuleCard, REGISTRY_MODULES } from "@/components/registry/module-card";
+import { customModuleAnchor } from "@/lib/custom-modules";
+import { ModuleSection } from "@/components/registry/module-section";
+import { ModuleEditShell } from "@/components/registry/module-edit-shell";
 import { SaveFeedback } from "@/components/registry/save-feedback";
 import { CodedSelect, CheckboxField } from "@/components/registry/form-fields";
 import { Button } from "@/components/ui/button";
@@ -38,6 +44,7 @@ import {
   HIV_STATUS,
   MARITAL_STATUS,
   MARGIN_STATUS,
+  MDT_MEETING_TYPE,
   MOLECULAR_RESULT,
   PROVINCES,
   RECURRENCE_SITE,
@@ -46,14 +53,16 @@ import {
   labelFor,
 } from "@/lib/codes";
 import { calcAge, calcDelays, calcSurvivalMetrics } from "@/lib/calculations";
-import { CHARLSON_CONDITIONS, parseCharlsonConditions, CANCER_OVARY, CANCER_ENDOMETRIUM } from "@/lib/comorbidities";
+import { CHARLSON_CONDITIONS, parseCharlsonConditions, CANCER_OVARY, CANCER_ENDOMETRIUM, CANCER_GTD, CANCER_GTN } from "@/lib/comorbidities";
+import { MDT_INITIAL_TYPE } from "@/lib/mdt";
 import { calcCharlsonIndex, calcSurgicalComplexityScore, calcTimeToRecurrenceDays, calcBmi } from "@/lib/esgo-metrics";
 import { formatDate, toInputDate } from "@/lib/utils";
-import type { Patient, Referral, Diagnosis, Imaging, Surgery, Histopathology, Chemotherapy, Radiotherapy, Complication, FollowUpVisit, Recurrence, Survival, ResearchModule } from "@prisma/client";
+import type { Patient, Referral, Diagnosis, MdtMeeting, Imaging, Surgery, Histopathology, Chemotherapy, Radiotherapy, Complication, FollowUpVisit, Recurrence, Survival, ResearchModule } from "@prisma/client";
 
 export type PatientRecord = Patient & {
   referral: Referral | null;
   diagnosis: Diagnosis | null;
+  mdtMeetings: MdtMeeting[];
   imaging: Imaging | null;
   surgeries: Surgery[];
   histopathology: Histopathology | null;
@@ -68,12 +77,14 @@ export type PatientRecord = Patient & {
 
 export function PatientRegistryChart({
   patient,
+  customModules,
   canWrite,
   canDelete,
   savedModule,
   errorMessage,
 }: {
   patient: PatientRecord;
+  customModules: CustomModuleForPatient[];
   canWrite: boolean;
   canDelete: boolean;
   savedModule?: string | null;
@@ -89,6 +100,7 @@ export function PatientRegistryChart({
 
   const pid = patient.id;
   const cancerType = patient.diagnosis?.cancerType;
+  const isGtnPath = cancerType === CANCER_GTD || cancerType === CANCER_GTN;
   const charlsonIndex = calcCharlsonIndex(patient.dateOfBirth, patient.charlsonConditions);
   const charlsonSelected = parseCharlsonConditions(patient.charlsonConditions);
   const timeToRecurrence = calcTimeToRecurrenceDays(
@@ -96,6 +108,11 @@ export function PatientRegistryChart({
     patient.recurrence?.recurrenceDate,
   );
   const autoBmi = calcBmi(patient.heightCm, patient.weightKg) ?? patient.bmi;
+
+  const navModules = [
+    ...REGISTRY_MODULES,
+    ...customModules.map((m) => ({ id: customModuleAnchor(m.slug), label: m.name })),
+  ];
 
   return (
     <div className="space-y-6">
@@ -141,7 +158,7 @@ export function PatientRegistryChart({
       )}
 
       <nav className="sticky top-0 z-10 -mx-1 flex gap-1.5 overflow-x-auto rounded-lg border border-slate-200 bg-white p-2 pb-2 text-xs [-webkit-overflow-scrolling:touch]">
-        {REGISTRY_MODULES.map((m) => (
+        {navModules.map((m) => (
           <a
             key={m.id}
             href={`#${m.id}`}
@@ -172,7 +189,19 @@ export function PatientRegistryChart({
       )}
 
       <ModuleCard id="demographics" title="Module 1 — Patient demographics">
-        {canWrite ? (
+        <ModuleEditShell
+          canWrite={canWrite}
+          hasData={Boolean(patient.hospitalNumber || patient.phone || patient.province)}
+          view={
+            <ReadonlyGrid items={[
+              ["Phone", patient.phone ?? "—"],
+              ["Province", labelFor(PROVINCES, patient.province)],
+              ["HIV", labelFor(HIV_STATUS, patient.hivStatus)],
+              ["ECOG", labelFor(ECOG, patient.ecog)],
+              ["BMI", patient.bmi?.toString() ?? "—"],
+            ]} />
+          }
+        >
           <form action={updateDemographicsAction.bind(null, pid)} className="space-y-3">
             <FormRow>
               <FormField><Label htmlFor="hospitalNumber">Hospital number</Label><Input id="hospitalNumber" name="hospitalNumber" defaultValue={patient.hospitalNumber ?? ""} /></FormField>
@@ -194,6 +223,13 @@ export function PatientRegistryChart({
               <FormField><CodedSelect id="educationLevel" name="educationLevel" label="Education" options={EDUCATION_LEVEL} defaultValue={patient.educationLevel} /></FormField>
               <FormField><Label htmlFor="occupation">Occupation</Label><Input id="occupation" name="occupation" defaultValue={patient.occupation ?? ""} /></FormField>
             </FormRow>
+            <div className="border-t border-slate-100 pt-3">
+              <p className="mb-3 text-sm font-medium text-slate-700">Contact details</p>
+              <FormField>
+                <Label htmlFor="phone">Phone</Label>
+                <Input id="phone" name="phone" type="tel" autoComplete="tel" placeholder="+263 77 123 4567" defaultValue={patient.phone ?? ""} />
+              </FormField>
+            </div>
             <FormRow>
               <FormField><CodedSelect id="hivStatus" name="hivStatus" label="HIV status" options={HIV_STATUS} defaultValue={patient.hivStatus} /></FormField>
               <FormField><CodedSelect id="artStatus" name="artStatus" label="ART status" options={ART_STATUS} defaultValue={patient.artStatus} /></FormField>
@@ -224,18 +260,22 @@ export function PatientRegistryChart({
             </FormField>
             <Button type="submit" size="sm">Save demographics</Button>
           </form>
-        ) : (
-          <ReadonlyGrid items={[
-            ["Province", labelFor(PROVINCES, patient.province)],
-            ["HIV", labelFor(HIV_STATUS, patient.hivStatus)],
-            ["ECOG", labelFor(ECOG, patient.ecog)],
-            ["BMI", patient.bmi?.toString() ?? "—"],
-          ]} />
-        )}
+        </ModuleEditShell>
       </ModuleCard>
 
       <ModuleCard id="referral" title="Module 2 — Referral & delays" description="Enables diagnostic delay research">
-        {canWrite ? (
+        <ModuleEditShell
+          canWrite={canWrite}
+          hasData={Boolean(patient.referral?.diagnosisDate || patient.referral?.symptomStartDate)}
+          view={
+            <ReadonlyGrid items={[
+              ["Symptom start", formatDate(patient.referral?.symptomStartDate)],
+              ["Diagnosis date", formatDate(patient.referral?.diagnosisDate)],
+              ["Treatment start", formatDate(patient.referral?.treatmentStartDate)],
+              ["Diagnosis delay (days)", delays?.diagnosisDelayDays?.toString() ?? "—"],
+            ]} />
+          }
+        >
           <form action={saveReferralAction.bind(null, pid)} className="space-y-3">
             <FormRow>
               <FormField><Label htmlFor="symptomStartDate">Symptom start date</Label><Input id="symptomStartDate" name="symptomStartDate" type="date" defaultValue={toInputDate(patient.referral?.symptomStartDate)} /></FormField>
@@ -252,13 +292,20 @@ export function PatientRegistryChart({
             <FormField><CodedSelect id="referralSource" name="referralSource" label="Referral source" options={REFERRAL_SOURCE} defaultValue={patient.referral?.referralSource} /></FormField>
             <Button type="submit" size="sm">Save referral</Button>
           </form>
-        ) : (
-          <p className="text-sm text-slate-600">Diagnosis delay: {delays?.diagnosisDelayDays ?? "—"} days</p>
-        )}
+        </ModuleEditShell>
       </ModuleCard>
 
-      <ModuleCard id="diagnosis" title="Module 3 — Diagnosis">
-        {canWrite ? (
+      <ModuleCard id="diagnosis" title="Module 3 — Diagnosis" description="Cancer site and staging — GTD and GTN are recorded separately">
+        <ModuleEditShell
+          canWrite={canWrite}
+          hasData={Boolean(patient.diagnosis?.cancerType)}
+          view={
+            <ReadonlyGrid items={[
+              ["Cancer", labelFor(CANCER_TYPE, patient.diagnosis?.cancerType)],
+              ["FIGO", labelFor(FIGO_STAGE, patient.diagnosis?.figoStage)],
+            ]} />
+          }
+        >
           <form action={saveDiagnosisAction.bind(null, pid)} className="space-y-3">
             <FormRow>
               <FormField><CodedSelect id="cancerType" name="cancerType" label="Cancer type" options={CANCER_TYPE} defaultValue={patient.diagnosis?.cancerType} /></FormField>
@@ -269,22 +316,83 @@ export function PatientRegistryChart({
               <FormField><CodedSelect id="figoStage" name="figoStage" label="FIGO stage" options={FIGO_STAGE} defaultValue={patient.diagnosis?.figoStage} /></FormField>
             </FormRow>
             <FormField><Label htmlFor="tnmStage">TNM stage</Label><Input id="tnmStage" name="tnmStage" defaultValue={patient.diagnosis?.tnmStage ?? ""} /></FormField>
-            <FormRow>
-              <FormField><CheckboxField id="mdtDiscussed" name="mdtDiscussed" label="MDT discussed" defaultChecked={patient.diagnosis?.mdtDiscussed} /></FormField>
-              <FormField><Label htmlFor="mdtDate">MDT date</Label><Input id="mdtDate" name="mdtDate" type="date" defaultValue={toInputDate(patient.diagnosis?.mdtDate)} /></FormField>
-            </FormRow>
+            <p className="text-xs text-slate-500">MDT discussions are recorded in the <a href="#mdt" className="font-medium text-teal-700 underline">MDT section</a> below.</p>
             <Button type="submit" size="sm">Save diagnosis</Button>
           </form>
+        </ModuleEditShell>
+      </ModuleCard>
+
+      <ModuleCard
+        id="mdt"
+        title="MDT — Multidisciplinary team"
+        description="Record each MDT discussion. An initial pre-theatre meeting is required; add rediscussions after pathology or when the plan changes."
+      >
+        {patient.mdtMeetings.length > 0 ? (
+          <div className="mb-4 space-y-2">
+            {patient.mdtMeetings.map((m) => (
+              <div
+                key={m.id}
+                className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-slate-200 bg-white p-3 text-sm"
+              >
+                <div>
+                  <p className="font-medium text-slate-900">
+                    {formatDate(m.meetingDate)} — {labelFor(MDT_MEETING_TYPE, m.meetingType)}
+                    {m.meetingType === MDT_INITIAL_TYPE ? (
+                      <span className="ml-2 rounded-full bg-teal-100 px-2 py-0.5 text-[11px] font-semibold text-teal-800">
+                        Pre-theatre
+                      </span>
+                    ) : null}
+                  </p>
+                  {m.summary ? <p className="mt-1 text-slate-600">{m.summary}</p> : null}
+                </div>
+                {canWrite ? (
+                  <form action={deleteMdtMeetingAction.bind(null, pid, m.id)}>
+                    <Button type="submit" variant="secondary" size="sm" className="text-xs">
+                      Remove
+                    </Button>
+                  </form>
+                ) : null}
+              </div>
+            ))}
+          </div>
         ) : (
-          <ReadonlyGrid items={[
-            ["Cancer", labelFor(CANCER_TYPE, patient.diagnosis?.cancerType)],
-            ["FIGO", labelFor(FIGO_STAGE, patient.diagnosis?.figoStage)],
-          ]} />
+          <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            No MDT meetings recorded. Add an <strong>initial pre-theatre</strong> discussion before surgery.
+          </p>
         )}
+        {canWrite ? (
+          <form action={addMdtMeetingAction.bind(null, pid)} className="space-y-3 border-t border-slate-100 pt-4">
+            <FormRow>
+              <FormField>
+                <Label htmlFor="meetingDate">MDT date *</Label>
+                <Input id="meetingDate" name="meetingDate" type="date" required />
+              </FormField>
+              <FormField>
+                <CodedSelect id="meetingType" name="meetingType" label="Meeting type *" options={MDT_MEETING_TYPE} />
+              </FormField>
+            </FormRow>
+            <FormField>
+              <Label htmlFor="summary">Summary / outcome</Label>
+              <Textarea id="summary" name="summary" rows={2} placeholder="e.g. Plan for primary surgery; rediscussed after pathology showing LVSI" />
+            </FormField>
+            <Button type="submit" size="sm">Add MDT meeting</Button>
+          </form>
+        ) : null}
       </ModuleCard>
 
       <ModuleCard id="imaging" title="Module 4 — Imaging">
-        {canWrite && (
+        <ModuleEditShell
+          canWrite={canWrite}
+          hasData={Boolean(patient.imaging?.ultrasoundDone || patient.imaging?.ctDone || patient.imaging?.tumorSizeMm)}
+          view={
+            <ReadonlyGrid items={[
+              ["Ultrasound", patient.imaging?.ultrasoundDone ? "Yes" : "—"],
+              ["CT", patient.imaging?.ctDone ? "Yes" : "—"],
+              ["Tumour size (mm)", patient.imaging?.tumorSizeMm?.toString() ?? "—"],
+              ["PCI score", patient.imaging?.pciScore?.toString() ?? "—"],
+            ]} />
+          }
+        >
           <form action={saveImagingAction.bind(null, pid)} className="space-y-3">
             <div className="grid gap-2 sm:grid-cols-2">
               <CheckboxField id="ultrasoundDone" name="ultrasoundDone" label="Ultrasound done" defaultChecked={patient.imaging?.ultrasoundDone} />
@@ -305,7 +413,7 @@ export function PatientRegistryChart({
             </div>
             <Button type="submit" size="sm">Save imaging</Button>
           </form>
-        )}
+        </ModuleEditShell>
       </ModuleCard>
 
       <ModuleCard id="surgery" title="Module 5 — Surgery" description="One patient may have multiple surgeries">
@@ -342,44 +450,107 @@ export function PatientRegistryChart({
         )}
       </ModuleCard>
 
-      <ModuleCard id="histopathology" title="Module 6 — Histopathology & molecular markers">
-        {canWrite && (
-          <form action={saveHistopathologyAction.bind(null, pid)} className="space-y-3">
-            <FormRow>
-              <FormField><Label htmlFor="pathologyDate">Pathology date</Label><Input id="pathologyDate" name="pathologyDate" type="date" defaultValue={toInputDate(patient.histopathology?.pathologyDate)} /></FormField>
-              <FormField><CodedSelect id="hpHistology" name="histology" label="Histology" options={HISTOLOGY} defaultValue={patient.histopathology?.histology} /></FormField>
-            </FormRow>
-            <FormRow>
-              <FormField><Label htmlFor="nodesRemoved">Nodes removed</Label><Input id="nodesRemoved" name="nodesRemoved" type="number" defaultValue={patient.histopathology?.nodesRemoved ?? ""} /></FormField>
-              <FormField><Label htmlFor="positiveNodes">Positive nodes</Label><Input id="positiveNodes" name="positiveNodes" type="number" defaultValue={patient.histopathology?.positiveNodes ?? ""} /></FormField>
-            </FormRow>
-            <FormField><CodedSelect id="marginStatus" name="marginStatus" label="Margin status" options={MARGIN_STATUS} defaultValue={patient.histopathology?.marginStatus} /></FormField>
-            <FormField><CheckboxField id="lvsi" name="lvsi" label="LVSI" defaultChecked={patient.histopathology?.lvsi} /></FormField>
-            {(cancerType === CANCER_ENDOMETRIUM || cancerType === CANCER_OVARY) && (
-              <p className="text-sm font-medium text-slate-700">
-                {cancerType === CANCER_ENDOMETRIUM ? "Endometrial molecular markers" : "Ovarian molecular markers"}
-              </p>
-            )}
-            {cancerType === CANCER_ENDOMETRIUM && (
+      <ModuleCard
+        id="histopathology"
+        title="Module 6 — Histopathology"
+        description="Specimen findings, immunohistochemistry (IHC), serum tumour markers, and molecular testing"
+      >
+        <ModuleEditShell
+          canWrite={canWrite}
+          hasData={Boolean(patient.histopathology?.pathologyDate || patient.histopathology?.nodesRemoved != null || patient.histopathology?.ca125)}
+          view={
+            <ReadonlyGrid items={[
+              ["Pathology date", formatDate(patient.histopathology?.pathologyDate)],
+              ["CA-125", patient.histopathology?.ca125?.toString() ?? "—"],
+              ["β-hCG", patient.histopathology?.betaHcg?.toString() ?? "—"],
+              ["p53", labelFor(MOLECULAR_RESULT, patient.histopathology?.p53)],
+            ]} />
+          }
+        >
+          <form action={saveHistopathologyAction.bind(null, pid)} className="space-y-4">
+            <ModuleSection title="Specimen & histology" description="Core pathology from the surgical specimen">
               <FormRow>
+                <FormField><Label htmlFor="pathologyDate">Pathology date</Label><Input id="pathologyDate" name="pathologyDate" type="date" defaultValue={toInputDate(patient.histopathology?.pathologyDate)} /></FormField>
+                <FormField><CodedSelect id="hpHistology" name="histology" label="Histology" options={HISTOLOGY} defaultValue={patient.histopathology?.histology} /></FormField>
+              </FormRow>
+              <FormRow>
+                <FormField><CodedSelect id="hpGrade" name="grade" label="Grade" options={GRADE} defaultValue={patient.histopathology?.grade} /></FormField>
+                <FormField><Label htmlFor="tumorSizeMm">Tumour size (mm)</Label><Input id="tumorSizeMm" name="tumorSizeMm" type="number" defaultValue={patient.histopathology?.tumorSizeMm ?? ""} /></FormField>
+              </FormRow>
+              <FormRow>
+                <FormField><Label htmlFor="nodesRemoved">Nodes removed</Label><Input id="nodesRemoved" name="nodesRemoved" type="number" defaultValue={patient.histopathology?.nodesRemoved ?? ""} /></FormField>
+                <FormField><Label htmlFor="positiveNodes">Positive nodes</Label><Input id="positiveNodes" name="positiveNodes" type="number" defaultValue={patient.histopathology?.positiveNodes ?? ""} /></FormField>
+              </FormRow>
+              <FormField><CodedSelect id="marginStatus" name="marginStatus" label="Margin status" options={MARGIN_STATUS} defaultValue={patient.histopathology?.marginStatus} /></FormField>
+              <FormField><CheckboxField id="lvsi" name="lvsi" label="LVSI (lymphovascular space invasion)" defaultChecked={patient.histopathology?.lvsi} /></FormField>
+            </ModuleSection>
+
+            <ModuleSection
+              title="Immunohistochemistry (IHC)"
+              description="Staining panel from the pathology report"
+            >
+              <FormRow>
+                <FormField><CodedSelect id="p16" name="p16" label="p16" options={MOLECULAR_RESULT} defaultValue={patient.histopathology?.p16} /></FormField>
                 <FormField><CodedSelect id="p53" name="p53" label="p53" options={MOLECULAR_RESULT} defaultValue={patient.histopathology?.p53} /></FormField>
                 <FormField><CodedSelect id="mmr" name="mmr" label="MMR" options={MOLECULAR_RESULT} defaultValue={patient.histopathology?.mmr} /></FormField>
-                <FormField><CodedSelect id="pole" name="pole" label="POLE" options={MOLECULAR_RESULT} defaultValue={patient.histopathology?.pole} /></FormField>
                 <FormField><CodedSelect id="er" name="er" label="ER" options={MOLECULAR_RESULT} defaultValue={patient.histopathology?.er} /></FormField>
-                <FormField><CodedSelect id="pr" name="pr" label="PR" options={MOLECULAR_RESULT} defaultValue={patient.histopathology?.pr} /></FormField>
               </FormRow>
-            )}
-            {cancerType === CANCER_OVARY && (
               <FormRow>
-                <FormField><CodedSelect id="brca" name="brca" label="BRCA" options={MOLECULAR_RESULT} defaultValue={patient.histopathology?.brca} /></FormField>
-                <FormField><CodedSelect id="hrd" name="hrd" label="HRD" options={MOLECULAR_RESULT} defaultValue={patient.histopathology?.hrd} /></FormField>
-                <FormField><Label htmlFor="ca125">CA125</Label><Input id="ca125" name="ca125" type="number" defaultValue={patient.histopathology?.ca125 ?? ""} /></FormField>
-                <FormField><Label htmlFor="he4">HE4</Label><Input id="he4" name="he4" type="number" defaultValue={patient.histopathology?.he4 ?? ""} /></FormField>
+                <FormField><CodedSelect id="pr" name="pr" label="PR" options={MOLECULAR_RESULT} defaultValue={patient.histopathology?.pr} /></FormField>
+                <FormField><CodedSelect id="ki67" name="ki67" label="Ki-67" options={MOLECULAR_RESULT} defaultValue={patient.histopathology?.ki67} /></FormField>
+                <FormField><CodedSelect id="ck7" name="ck7" label="CK7" options={MOLECULAR_RESULT} defaultValue={patient.histopathology?.ck7} /></FormField>
+                <FormField><CodedSelect id="ck20" name="ck20" label="CK20" options={MOLECULAR_RESULT} defaultValue={patient.histopathology?.ck20} /></FormField>
               </FormRow>
+              <FormField>
+                <Label htmlFor="ihcNotes">IHC notes</Label>
+                <Textarea id="ihcNotes" name="ihcNotes" rows={2} placeholder="Other stains or pathologist comments" defaultValue={patient.histopathology?.ihcNotes ?? ""} />
+              </FormField>
+            </ModuleSection>
+
+            <ModuleSection
+              title="Serum tumour markers"
+              description={isGtnPath ? "β-hCG is essential for GTN/GTD monitoring" : "Record pre-treatment or follow-up marker levels (U/L unless noted)"}
+            >
+              <FormField>
+                <Label htmlFor="markerDate">Marker sample date</Label>
+                <Input id="markerDate" name="markerDate" type="date" defaultValue={toInputDate(patient.histopathology?.markerDate)} />
+              </FormField>
+              <FormRow>
+                <FormField><Label htmlFor="ca125">CA-125</Label><Input id="ca125" name="ca125" type="number" step="0.1" defaultValue={patient.histopathology?.ca125 ?? ""} /></FormField>
+                <FormField><Label htmlFor="he4">HE4</Label><Input id="he4" name="he4" type="number" step="0.1" defaultValue={patient.histopathology?.he4 ?? ""} /></FormField>
+                <FormField><Label htmlFor="betaHcg">β-hCG</Label><Input id="betaHcg" name="betaHcg" type="number" step="0.1" defaultValue={patient.histopathology?.betaHcg ?? ""} /></FormField>
+              </FormRow>
+              <FormRow>
+                <FormField><Label htmlFor="afp">AFP</Label><Input id="afp" name="afp" type="number" step="0.1" defaultValue={patient.histopathology?.afp ?? ""} /></FormField>
+                <FormField><Label htmlFor="cea">CEA</Label><Input id="cea" name="cea" type="number" step="0.1" defaultValue={patient.histopathology?.cea ?? ""} /></FormField>
+                <FormField><Label htmlFor="ldh">LDH</Label><Input id="ldh" name="ldh" type="number" step="0.1" defaultValue={patient.histopathology?.ldh ?? ""} /></FormField>
+              </FormRow>
+              <FormField>
+                <Label htmlFor="markerNotes">Tumour marker notes</Label>
+                <Textarea id="markerNotes" name="markerNotes" rows={2} defaultValue={patient.histopathology?.markerNotes ?? ""} />
+              </FormField>
+            </ModuleSection>
+
+            {(cancerType === CANCER_ENDOMETRIUM || cancerType === CANCER_OVARY) && (
+              <ModuleSection
+                title="Molecular / genomic"
+                description={cancerType === CANCER_ENDOMETRIUM ? "Endometrial molecular classification" : "Ovarian homologous recombination testing"}
+              >
+                {cancerType === CANCER_ENDOMETRIUM && (
+                  <FormField><CodedSelect id="pole" name="pole" label="POLE" options={MOLECULAR_RESULT} defaultValue={patient.histopathology?.pole} /></FormField>
+                )}
+                {cancerType === CANCER_OVARY && (
+                  <FormRow>
+                    <FormField><CodedSelect id="brca" name="brca" label="BRCA" options={MOLECULAR_RESULT} defaultValue={patient.histopathology?.brca} /></FormField>
+                    <FormField><CodedSelect id="hrd" name="hrd" label="HRD" options={MOLECULAR_RESULT} defaultValue={patient.histopathology?.hrd} /></FormField>
+                  </FormRow>
+                )}
+              </ModuleSection>
             )}
+
             <Button type="submit" size="sm">Save histopathology</Button>
           </form>
-        )}
+        </ModuleEditShell>
       </ModuleCard>
 
       <ModuleCard id="chemotherapy" title="Module 7 — Chemotherapy">
@@ -406,7 +577,17 @@ export function PatientRegistryChart({
       </ModuleCard>
 
       <ModuleCard id="radiotherapy" title="Module 8 — Radiotherapy">
-        {canWrite && (
+        <ModuleEditShell
+          canWrite={canWrite}
+          hasData={Boolean(patient.radiotherapy?.ebrtGiven || patient.radiotherapy?.brachytherapyGiven)}
+          view={
+            <ReadonlyGrid items={[
+              ["EBRT", patient.radiotherapy?.ebrtGiven ? "Yes" : "—"],
+              ["Brachytherapy", patient.radiotherapy?.brachytherapyGiven ? "Yes" : "—"],
+              ["Dose (Gy)", patient.radiotherapy?.doseGy?.toString() ?? "—"],
+            ]} />
+          }
+        >
           <form action={saveRadiotherapyAction.bind(null, pid)} className="space-y-3">
             <CheckboxField id="ebrtGiven" name="ebrtGiven" label="EBRT given" defaultChecked={patient.radiotherapy?.ebrtGiven} />
             <FormRow>
@@ -421,7 +602,7 @@ export function PatientRegistryChart({
             <CheckboxField id="interrupted" name="interrupted" label="Interrupted" defaultChecked={patient.radiotherapy?.interrupted} />
             <Button type="submit" size="sm">Save radiotherapy</Button>
           </form>
-        )}
+        </ModuleEditShell>
       </ModuleCard>
 
       <ModuleCard id="complications" title="Module 9 — Complications (Clavien-Dindo)">
@@ -468,7 +649,17 @@ export function PatientRegistryChart({
       </ModuleCard>
 
       <ModuleCard id="recurrence" title="Module 11 — Recurrence">
-        {canWrite && (
+        <ModuleEditShell
+          canWrite={canWrite}
+          hasData={Boolean(patient.recurrence?.recurrenceDate)}
+          view={
+            <ReadonlyGrid items={[
+              ["Recurrence date", formatDate(patient.recurrence?.recurrenceDate)],
+              ["Site", labelFor(RECURRENCE_SITE, patient.recurrence?.recurrenceSite)],
+              ["Biopsy confirmed", patient.recurrence?.biopsyConfirmed ? "Yes" : "No"],
+            ]} />
+          }
+        >
           <form action={saveRecurrenceAction.bind(null, pid)} className="space-y-3">
             <FormRow>
               <FormField><Label htmlFor="recurrenceDate">Recurrence date</Label><Input id="recurrenceDate" name="recurrenceDate" type="date" defaultValue={toInputDate(patient.recurrence?.recurrenceDate)} /></FormField>
@@ -478,11 +669,21 @@ export function PatientRegistryChart({
             <FormField><Label htmlFor="treatmentForRecurrence">Treatment for recurrence</Label><Textarea id="treatmentForRecurrence" name="treatmentForRecurrence" rows={2} defaultValue={patient.recurrence?.treatmentForRecurrence ?? ""} /></FormField>
             <Button type="submit" size="sm">Save recurrence</Button>
           </form>
-        )}
+        </ModuleEditShell>
       </ModuleCard>
 
       <ModuleCard id="survival" title="Module 12 — Survival outcomes">
-        {canWrite && (
+        <ModuleEditShell
+          canWrite={canWrite}
+          hasData={Boolean(patient.survival?.aliveStatus || patient.survival?.dateLastSeen)}
+          view={
+            <ReadonlyGrid items={[
+              ["Status", labelFor(ALIVE_STATUS, patient.survival?.aliveStatus)],
+              ["Last seen", formatDate(patient.survival?.dateLastSeen)],
+              ["Death date", formatDate(patient.survival?.deathDate)],
+            ]} />
+          }
+        >
           <form action={saveSurvivalAction.bind(null, pid)} className="space-y-3">
             <FormField><CodedSelect id="aliveStatus" name="aliveStatus" label="Status" options={ALIVE_STATUS} defaultValue={patient.survival?.aliveStatus} /></FormField>
             <FormRow>
@@ -492,11 +693,21 @@ export function PatientRegistryChart({
             <FormField><Label htmlFor="causeOfDeath">Cause of death</Label><Input id="causeOfDeath" name="causeOfDeath" defaultValue={patient.survival?.causeOfDeath ?? ""} /></FormField>
             <Button type="submit" size="sm">Save survival</Button>
           </form>
-        )}
+        </ModuleEditShell>
       </ModuleCard>
 
       <ModuleCard id="research" title="Module 13 — Research / biobank">
-        {canWrite && (
+        <ModuleEditShell
+          canWrite={canWrite}
+          hasData={Boolean(patient.research?.consentForResearch || patient.research?.tissueBank)}
+          view={
+            <ReadonlyGrid items={[
+              ["Research consent", patient.research?.consentForResearch ? "Yes" : "No"],
+              ["Tissue bank", patient.research?.tissueBank ? "Yes" : "No"],
+              ["Genomic testing", patient.research?.genomicTesting ? "Yes" : "No"],
+            ]} />
+          }
+        >
           <form action={saveResearchAction.bind(null, pid)} className="space-y-3">
             <div className="grid gap-2 sm:grid-cols-2">
               <CheckboxField id="consentForResearch" name="consentForResearch" label="Consent for research" defaultChecked={patient.research?.consentForResearch} />
@@ -508,8 +719,26 @@ export function PatientRegistryChart({
             <FormField><Label htmlFor="qualityOfLifeScores">Quality of life / PROMs</Label><Textarea id="qualityOfLifeScores" name="qualityOfLifeScores" rows={2} defaultValue={patient.research?.qualityOfLifeScores ?? ""} /></FormField>
             <Button type="submit" size="sm">Save research module</Button>
           </form>
-        )}
+        </ModuleEditShell>
       </ModuleCard>
+
+      {customModules.length > 0 ? (
+        <div className="space-y-4 border-t border-dashed border-[#D5E4E2] pt-6">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-[#0C4F4E]">Custom modules</h2>
+            <p className="text-sm text-slate-600">
+              Added in{" "}
+              <Link href="/builder" className="font-medium text-teal-700 underline">
+                Module builder
+              </Link>
+              . Open a module to view or edit patient data.
+            </p>
+          </div>
+          {customModules.map((mod) => (
+            <CustomModulePatientCard key={mod.id} patientId={pid} module={mod} canWrite={canWrite} />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

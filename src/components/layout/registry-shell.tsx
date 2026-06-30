@@ -9,7 +9,7 @@ const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: "▦" },
   { href: "/patients", label: "Patients", icon: "❏", badgeKey: "patients" as const },
   { href: "/patients/new", label: "New patient", icon: "＋" },
-  { href: "/builder", label: "Module builder", icon: "⚙", disabled: true },
+  { href: "/builder", label: "Module builder", icon: "⚙", modulesOnly: true as const },
   { href: "/reports", label: "Export & research", icon: "⤓" },
   { href: "/admin", label: "Admin", icon: "☷", adminOnly: true },
 ];
@@ -30,6 +30,7 @@ export function RegistryShell({
   const [navOpen, setNavOpen] = useState(false);
 
   const isAdmin = user.role === "ADMIN";
+  const canManageModules = user.role === "ADMIN" || user.role === "CLINICIAN";
 
   useEffect(() => {
     setNavOpen(false);
@@ -67,7 +68,11 @@ export function RegistryShell({
     .slice(0, 2)
     .toUpperCase();
 
-  const navItems = NAV.filter((item) => !item.adminOnly || isAdmin);
+  const navItems = NAV.filter((item) => {
+    if (item.adminOnly && !isAdmin) return false;
+    if ("modulesOnly" in item && item.modulesOnly && !canManageModules) return false;
+    return true;
+  });
 
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-[#F4F1EB] text-[#1A2421]">
@@ -109,7 +114,7 @@ export function RegistryShell({
 
         <nav className="mt-1.5 flex flex-col gap-0.5 overflow-y-auto">
           {navItems.map((item) => {
-            if (item.disabled) {
+            if ("disabled" in item && item.disabled) {
               return (
                 <div
                   key={item.label}
@@ -210,6 +215,7 @@ function pageTitle(pathname: string) {
   if (pathname === "/patients/new") return { title: "New patient", sub: "Register a new registry case" };
   if (pathname.startsWith("/patients/")) return { title: "Patient record", sub: "Clinical modules and audit trail" };
   if (pathname === "/reports") return { title: "Export & research", sub: "De-identified data export" };
+  if (pathname === "/builder") return { title: "Module builder", sub: "Add and edit custom registry modules" };
   if (pathname.startsWith("/admin")) return { title: "Admin", sub: "Invites, users, and audit" };
   return { title: "Registry", sub: "" };
 }

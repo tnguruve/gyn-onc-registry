@@ -90,6 +90,11 @@ export default async function NewPatientPage({
                 <Input id="occupation" name="occupation" />
               </FormField>
             </FormRow>
+            <FormField>
+              <Label htmlFor="phone">Phone</Label>
+              <Input id="phone" name="phone" type="tel" autoComplete="tel" placeholder="+263 77 123 4567" />
+            </FormField>
+            <p className="text-xs text-slate-500">Contact details are for clinical follow-up only — not included in de-identified exports.</p>
             <FormRow>
               <FormField>
                 <CodedSelect id="hivStatus" name="hivStatus" label="HIV status" options={HIV_STATUS} />

@@ -2,6 +2,7 @@ const SAVED_LABELS: Record<string, string> = {
   demographics: "Demographics saved",
   referral: "Referral & delays saved",
   diagnosis: "Diagnosis saved",
+  mdt: "MDT meeting recorded",
   imaging: "Imaging saved",
   histopathology: "Histopathology saved",
   radiotherapy: "Radiotherapy saved",
@@ -27,7 +28,9 @@ export function SaveFeedback({
     );
   }
 
-  const label = SAVED_LABELS[saved!] ?? "Changes saved";
+  const label =
+    SAVED_LABELS[saved!] ??
+    (saved?.startsWith("custom-") ? "Custom module saved" : "Changes saved");
   return (
     <div className="rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-900">
       ✓ {label}. Data is stored in the registry database.

@@ -26,6 +26,7 @@ export const REGISTRY_MODULES = [
   { id: "demographics", label: "Demographics" },
   { id: "referral", label: "Referral & delays" },
   { id: "diagnosis", label: "Diagnosis" },
+  { id: "mdt", label: "MDT" },
   { id: "imaging", label: "Imaging" },
   { id: "surgery", label: "Surgery" },
   { id: "histopathology", label: "Histopathology" },

@@ -19,6 +19,8 @@ import { calcBmi } from "@/lib/esgo-metrics";
 import { loginSchema, signupSchema } from "@/lib/validators";
 import { computeWorkflowStatus } from "@/lib/patient-workflow";
 import { buildInviteUrl, generateInviteToken, inviteExpiry } from "@/lib/invites";
+import { MDT_INITIAL_TYPE } from "@/lib/mdt";
+import { slugifyModuleName, type CustomFieldDraft, type CustomModuleDraft } from "@/lib/custom-modules";
 
 function redirectWithError(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
@@ -67,7 +69,7 @@ async function refreshRegistryViews(patientId?: string) {
   if (patientId) {
     const full = await prisma.patient.findUnique({
       where: { id: patientId },
-      include: { referral: true, diagnosis: true, surgeries: true, followUps: true },
+      include: { referral: true, diagnosis: true, mdtMeetings: true, surgeries: true, followUps: true },
     });
     if (full) {
       await prisma.patient.update({
@@ -237,14 +239,68 @@ export async function saveDiagnosisAction(patientId: string, formData: FormData)
     grade: codeFromForm(formData.get("grade")),
     figoStage: codeFromForm(formData.get("figoStage")),
     tnmStage: String(formData.get("tnmStage") ?? "").trim() || undefined,
-    mdtDiscussed: boolFromForm(formData.get("mdtDiscussed")),
-    mdtDate: parseDate(formData.get("mdtDate")),
   };
   await prisma.diagnosis.upsert({ where: { patientId }, create: { patientId, ...data }, update: data });
   await logAudit({ userId: session.id, userEmail: session.email, action: "UPDATE", entityType: "Diagnosis", entityId: patientId });
   await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
   redirect(`${patientPath(patientId)}?saved=diagnosis#diagnosis`);
+}
+
+export async function addMdtMeetingAction(patientId: string, formData: FormData) {
+  const session = await requirePermission("clinical:write");
+  const meetingDate = parseDate(formData.get("meetingDate"));
+  if (!meetingDate) redirectWithError(patientPath(patientId), "MDT date is required");
+
+  const meetingType = codeFromForm(formData.get("meetingType"));
+  if (!meetingType) redirectWithError(patientPath(patientId), "MDT type is required");
+
+  await prisma.mdtMeeting.create({
+    data: {
+      patientId,
+      meetingDate,
+      meetingType,
+      summary: String(formData.get("summary") ?? "").trim() || undefined,
+    },
+  });
+
+  if (meetingType === MDT_INITIAL_TYPE) {
+    await prisma.diagnosis.upsert({
+      where: { patientId },
+      create: { patientId, mdtDiscussed: true, mdtDate: meetingDate },
+      update: { mdtDiscussed: true, mdtDate: meetingDate },
+    });
+  }
+
+  await logAudit({ userId: session.id, userEmail: session.email, action: "CREATE", entityType: "MdtMeeting", entityId: patientId });
+  await refreshRegistryViews(patientId);
+  revalidatePath(patientPath(patientId));
+  redirect(`${patientPath(patientId)}?saved=mdt#mdt`);
+}
+
+export async function deleteMdtMeetingAction(patientId: string, meetingId: string) {
+  const session = await requirePermission("clinical:write");
+  const meeting = await prisma.mdtMeeting.findFirst({ where: { id: meetingId, patientId } });
+  if (!meeting) redirectWithError(patientPath(patientId), "MDT meeting not found");
+
+  await prisma.mdtMeeting.delete({ where: { id: meetingId } });
+
+  if (meeting.meetingType === MDT_INITIAL_TYPE) {
+    const stillHasInitial = await prisma.mdtMeeting.count({
+      where: { patientId, meetingType: MDT_INITIAL_TYPE },
+    });
+    if (stillHasInitial === 0) {
+      await prisma.diagnosis.updateMany({
+        where: { patientId },
+        data: { mdtDiscussed: false, mdtDate: null },
+      });
+    }
+  }
+
+  await logAudit({ userId: session.id, userEmail: session.email, action: "DELETE", entityType: "MdtMeeting", entityId: meetingId });
+  await refreshRegistryViews(patientId);
+  revalidatePath(patientPath(patientId));
+  redirect(`${patientPath(patientId)}#mdt`);
 }
 
 export async function saveImagingAction(patientId: string, formData: FormData) {
@@ -322,12 +378,23 @@ export async function saveHistopathologyAction(patientId: string, formData: Form
     hrd: codeFromForm(formData.get("hrd")),
     ca125: parseFloatField(formData.get("ca125")),
     he4: parseFloatField(formData.get("he4")),
+    markerDate: parseDate(formData.get("markerDate")),
+    betaHcg: parseFloatField(formData.get("betaHcg")),
+    afp: parseFloatField(formData.get("afp")),
+    cea: parseFloatField(formData.get("cea")),
+    ldh: parseFloatField(formData.get("ldh")),
+    markerNotes: String(formData.get("markerNotes") ?? "").trim() || undefined,
+    p16: codeFromForm(formData.get("p16")),
+    ki67: codeFromForm(formData.get("ki67")),
+    ck7: codeFromForm(formData.get("ck7")),
+    ck20: codeFromForm(formData.get("ck20")),
+    ihcNotes: String(formData.get("ihcNotes") ?? "").trim() || undefined,
   };
   await prisma.histopathology.upsert({ where: { patientId }, create: { patientId, ...data }, update: data });
   await logAudit({ userId: session.id, userEmail: session.email, action: "UPDATE", entityType: "Histopathology", entityId: patientId });
   await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
-  redirect(`${patientPath(patientId)}#histopathology`);
+  redirect(`${patientPath(patientId)}?saved=histopathology#histopathology`);
 }
 
 export async function addChemotherapyAction(patientId: string, formData: FormData) {
@@ -566,4 +633,141 @@ export async function deletePatientAction(patientId: string) {
 export async function logPatientViewAction(patientId: string) {
   const session = await requireSession();
   await logAudit({ userId: session.id, userEmail: session.email, action: "VIEW", entityType: "Patient", entityId: patientId });
+}
+
+export type CustomModulePayload = CustomModuleDraft;
+
+export async function upsertCustomModuleAction(formData: FormData) {
+  const session = await requirePermission("modules:manage");
+  const raw = String(formData.get("payload") ?? "");
+  let payload: CustomModulePayload;
+  try {
+    payload = JSON.parse(raw) as CustomModulePayload;
+  } catch {
+    redirectWithError("/builder", "Invalid module data");
+  }
+
+  const name = payload.name?.trim();
+  if (!name) redirectWithError("/builder", "Module name is required");
+  if (!payload.fields?.length) redirectWithError("/builder", "Add at least one field");
+
+  for (const field of payload.fields) {
+    if (!field.label?.trim()) redirectWithError("/builder", "Every field needs a label");
+    if (field.fieldType === "dropdown" && (!field.options || field.options.filter(Boolean).length < 2)) {
+      redirectWithError("/builder", `Dropdown "${field.label}" needs at least two options`);
+    }
+  }
+
+  let slug = slugifyModuleName(name);
+  if (payload.id) {
+    const existing = await prisma.customModule.findUnique({ where: { id: payload.id } });
+    if (!existing) redirectWithError("/builder", "Module not found");
+    slug = existing.slug;
+  } else {
+    const taken = await prisma.customModule.findUnique({ where: { slug } });
+    if (taken) slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
+  }
+
+  const moduleData = {
+    name,
+    description: payload.description?.trim() || null,
+    helperText: payload.helperText?.trim() || null,
+    slug,
+    isPermanent: payload.isPermanent !== false,
+    active: true,
+  };
+
+  const module = payload.id
+    ? await prisma.customModule.update({ where: { id: payload.id }, data: moduleData })
+    : await prisma.customModule.create({
+        data: {
+          ...moduleData,
+          sortOrder: (await prisma.customModule.count()) + 1,
+        },
+      });
+
+  await prisma.customModuleField.deleteMany({ where: { moduleId: module.id } });
+  await prisma.customModuleField.createMany({
+    data: payload.fields.map((field, index) => ({
+      moduleId: module.id,
+      label: field.label.trim(),
+      fieldType: field.fieldType,
+      required: field.required,
+      options: field.fieldType === "dropdown" ? JSON.stringify(field.options.map((o) => o.trim()).filter(Boolean)) : null,
+      sortOrder: index,
+    })),
+  });
+
+  await logAudit({
+    userId: session.id,
+    userEmail: session.email,
+    action: payload.id ? "UPDATE" : "CREATE",
+    entityType: "CustomModule",
+    entityId: module.id,
+    details: name,
+  });
+
+  revalidatePath("/builder");
+  revalidatePath("/patients");
+  redirect(`/builder?module=${module.id}&saved=1`);
+}
+
+export async function deleteCustomModuleAction(moduleId: string) {
+  const session = await requirePermission("modules:manage");
+  const mod = await prisma.customModule.findUnique({ where: { id: moduleId } });
+  if (!mod) redirectWithError("/builder", "Module not found");
+
+  await prisma.customModule.delete({ where: { id: moduleId } });
+  await logAudit({
+    userId: session.id,
+    userEmail: session.email,
+    action: "DELETE",
+    entityType: "CustomModule",
+    entityId: moduleId,
+    details: mod.name,
+  });
+  revalidatePath("/builder");
+  revalidatePath("/patients");
+  redirect("/builder?deleted=1");
+}
+
+export async function savePatientCustomModuleAction(patientId: string, moduleId: string, formData: FormData) {
+  const session = await requirePermission("clinical:write");
+  const mod = await prisma.customModule.findUnique({
+    where: { id: moduleId, active: true },
+    include: { fields: true },
+  });
+  if (!mod) redirectWithError(patientPath(patientId), "Module not found");
+
+  const values: Record<string, string> = {};
+  for (const field of mod.fields) {
+    const key = `field_${field.id}`;
+    if (field.fieldType === "checkbox" || field.fieldType === "boolean") {
+      values[field.id] = formData.get(key) === "on" ? "1" : "0";
+    } else {
+      values[field.id] = String(formData.get(key) ?? "").trim();
+    }
+    if (field.required && !values[field.id]) {
+      redirectWithError(patientPath(patientId), `${field.label} is required`);
+    }
+  }
+
+  await prisma.patientCustomModuleData.upsert({
+    where: { patientId_moduleId: { patientId, moduleId } },
+    create: { patientId, moduleId, values: JSON.stringify(values) },
+    update: { values: JSON.stringify(values) },
+  });
+
+  await logAudit({
+    userId: session.id,
+    userEmail: session.email,
+    action: "UPDATE",
+    entityType: "PatientCustomModuleData",
+    entityId: `${patientId}:${moduleId}`,
+    details: mod.name,
+  });
+
+  await refreshRegistryViews(patientId);
+  revalidatePath(patientPath(patientId));
+  redirect(`${patientPath(patientId)}?saved=custom-${mod.slug}#custom-${mod.slug}`);
 }

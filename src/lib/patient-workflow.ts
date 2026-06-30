@@ -1,10 +1,12 @@
 import type {
   Diagnosis,
   FollowUpVisit,
+  MdtMeeting,
   Patient,
   Referral,
   Surgery,
 } from "@prisma/client";
+import { hasPreTheatreMdt } from "@/lib/mdt";
 
 export const WORKFLOW_STATUSES = [
   "DRAFT",
@@ -20,6 +22,7 @@ export type WorkflowStatus = (typeof WORKFLOW_STATUSES)[number];
 export type PatientWorkflowInput = Patient & {
   referral: Referral | null;
   diagnosis: Diagnosis | null;
+  mdtMeetings?: MdtMeeting[];
   surgeries: Surgery[];
   followUps: FollowUpVisit[];
 };
@@ -29,7 +32,7 @@ const FOLLOW_UP_INTERVAL_DAYS = 90;
 
 export function computeWorkflowStatus(patient: PatientWorkflowInput): WorkflowStatus {
   if (!patient.diagnosis?.cancerType) return "DRAFT";
-  if (patient.diagnosis.cancerType && !patient.diagnosis.mdtDiscussed) return "MDT_PENDING";
+  if (!hasPreTheatreMdt(patient.diagnosis, patient.mdtMeetings)) return "MDT_PENDING";
 
   const upcomingSurgery = patient.surgeries.find(
     (s) => s.surgeryDate && new Date(s.surgeryDate) > new Date(),

@@ -67,6 +67,7 @@ model Patient {
   updatedAt       DateTime        @updatedAt
   referral        Referral?
   diagnosis       Diagnosis?
+  mdtMeetings     MdtMeeting[]
   imaging         Imaging?
   surgeries       Surgery[]
   histopathology  Histopathology?
@@ -77,6 +78,7 @@ model Patient {
   recurrence      Recurrence?
   survival        Survival?
   research        ResearchModule?
+  customModuleData PatientCustomModuleData[]
 }
 
 model Referral {
@@ -107,6 +109,19 @@ model Diagnosis {
   mdtDate         DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+}
+
+model MdtMeeting {
+  id          String   @id @default(cuid())
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  meetingDate DateTime
+  meetingType String
+  summary     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([patientId])
 }
 
 model Imaging {
@@ -175,6 +190,17 @@ model Histopathology {
   hrd                 String?
   ca125               Float?
   he4                 Float?
+  markerDate          DateTime?
+  betaHcg             Float?
+  afp                 Float?
+  cea                 Float?
+  ldh                 Float?
+  markerNotes         String?
+  p16                 String?
+  ki67                String?
+  ck7                 String?
+  ck20                String?
+  ihcNotes            String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }
@@ -299,4 +325,48 @@ model ExportLog {
   recordCount  Int
   deidentified Boolean  @default(true)
   createdAt    DateTime @default(now())
+}
+
+model CustomModule {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  helperText  String?
+  slug        String   @unique
+  isPermanent Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  active      Boolean  @default(true)
+  fields      CustomModuleField[]
+  patientData PatientCustomModuleData[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CustomModuleField {
+  id        String       @id @default(cuid())
+  moduleId  String
+  module    CustomModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  label     String
+  fieldType String
+  required  Boolean      @default(false)
+  options   String?
+  sortOrder Int          @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([moduleId])
+}
+
+model PatientCustomModuleData {
+  id        String       @id @default(cuid())
+  patientId String
+  moduleId  String
+  patient   Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  module    CustomModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  values    String       @default("{}")
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([patientId, moduleId])
+  @@index([patientId])
 }

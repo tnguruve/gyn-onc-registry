@@ -6,6 +6,7 @@ export const CANCER_ENDOMETRIUM = "3";
 export const CANCER_VULVA = "4";
 export const CANCER_VAGINA = "5";
 export const CANCER_GTD = "6";
+export const CANCER_GTN = "7";
 
 export const CHARLSON_CONDITIONS: (CodeOption & { points: number })[] = [
   { code: "mi", label: "Myocardial infarction", points: 1 },
