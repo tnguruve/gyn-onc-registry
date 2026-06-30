@@ -9,7 +9,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3.5 min-[480px]:grid-cols-2 lg:grid-cols-5">
         <StatCard
           label="Total patients"
           value={stats.total}
@@ -109,7 +109,7 @@ export default async function DashboardPage() {
                 <Link
                   key={p.id}
                   href={`/patients/${p.id}`}
-                  className="grid grid-cols-[1.4fr_1fr_.8fr_auto] items-center gap-2.5 border-b border-[#F0ECE3] px-2 py-3 transition hover:bg-[#FBFAF6]"
+                  className="grid grid-cols-1 items-center gap-2 border-b border-[#F0ECE3] px-2 py-3 transition hover:bg-[#FBFAF6] min-[520px]:grid-cols-[1.4fr_1fr_.8fr_auto]"
                 >
                   <div className="flex min-w-0 items-center gap-2.5">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#ECF3F2] text-xs font-semibold text-[#0C4F4E]">

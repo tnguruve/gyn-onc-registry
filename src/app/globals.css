@@ -32,6 +32,8 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-ibm-plex-sans), system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  text-size-adjust: 100%;
 }
 
 .font-display {
@@ -66,4 +68,227 @@ body {
 .chart-bar {
   transform-origin: bottom;
   animation: barGrow 0.5s ease forwards;
+}
+
+/* ——— Welcome / auth motion ——— */
+
+.welcome-brand-panel {
+  background: radial-gradient(120% 90% at 18% 12%, #14706e 0%, #0c4f4e 46%, #0a3c3d 100%);
+}
+
+.welcome-aurora {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(72px);
+  will-change: transform;
+}
+
+.welcome-aurora-1 {
+  width: 420px;
+  height: 420px;
+  left: -12%;
+  top: 18%;
+  background: radial-gradient(circle, rgba(20, 128, 126, 0.35) 0%, transparent 70%);
+  animation: welcomeAurora1 22s ease-in-out infinite;
+}
+
+.welcome-aurora-2 {
+  width: 380px;
+  height: 380px;
+  right: -8%;
+  bottom: 8%;
+  background: radial-gradient(circle, rgba(122, 59, 94, 0.28) 0%, transparent 72%);
+  animation: welcomeAurora2 26s ease-in-out infinite;
+}
+
+.welcome-aurora-3 {
+  width: 320px;
+  height: 320px;
+  left: 28%;
+  bottom: -6%;
+  background: radial-gradient(circle, rgba(20, 128, 126, 0.22) 0%, transparent 68%);
+  animation: welcomeAurora3 18s ease-in-out infinite;
+}
+
+.welcome-plum-glow {
+  background: radial-gradient(circle, rgba(122, 59, 94, 0.55), transparent 70%);
+  animation: welcomePlumPulse 9s ease-in-out infinite;
+}
+
+.welcome-grid-overlay {
+  opacity: 0.14;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.6) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.6) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(80% 80% at 30% 30%, #000 0%, transparent 75%);
+  will-change: transform;
+}
+
+.welcome-stagger-item {
+  opacity: 0;
+  animation: welcomeFadeUp 0.7s ease forwards;
+}
+
+@keyframes welcomeAurora1 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(28px, -22px) scale(1.08);
+  }
+}
+
+@keyframes welcomeAurora2 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-24px, 18px) scale(1.06);
+  }
+}
+
+@keyframes welcomeAurora3 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(16px, 26px) scale(1.1);
+  }
+}
+
+@keyframes welcomePlumPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@keyframes welcomeFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes authStepEnterForward {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes authStepEnterBack {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.auth-step-enter-forward {
+  animation: authStepEnterForward 0.35s ease forwards;
+}
+
+.auth-step-enter-back {
+  animation: authStepEnterBack 0.35s ease forwards;
+}
+
+.auth-primary-btn {
+  display: flex;
+  min-height: 48px;
+  height: 54px;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 12px;
+  border: none;
+  background: #0c4f4e;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  box-shadow: 0 10px 24px -10px rgba(12, 79, 78, 0.65);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.auth-primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px -10px rgba(12, 79, 78, 0.7);
+}
+
+.auth-secondary-btn {
+  display: flex;
+  height: 50px;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 12px;
+  border: 1.5px solid #ddd7cb;
+  background: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1a2421;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.auth-secondary-btn:not(:disabled):hover {
+  border-color: #0c4f4e;
+  background: #faf9f7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-aurora,
+  .welcome-plum-glow {
+    animation: none !important;
+  }
+
+  .welcome-plum-glow {
+    opacity: 0.7;
+  }
+
+  .welcome-stagger-item {
+    opacity: 1;
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .auth-step-enter-forward,
+  .auth-step-enter-back {
+    animation: none !important;
+    opacity: 1;
+    transform: none !important;
+  }
+
+  .auth-primary-btn:hover {
+    transform: none;
+  }
+
+  .card-hover:hover {
+    transform: none;
+  }
 }

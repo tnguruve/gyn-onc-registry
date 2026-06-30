@@ -102,7 +102,7 @@ export function PatientRegistryChart({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="font-mono text-sm text-teal-700">{patient.registryNumber}</p>
-          <h1 className="text-2xl font-semibold text-slate-900">
+          <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">
             {patient.surname}, {patient.firstName}
           </h1>
           <p className="text-sm text-slate-600">
@@ -140,9 +140,13 @@ export function PatientRegistryChart({
         </p>
       )}
 
-      <nav className="sticky top-0 z-10 -mx-1 flex gap-2 overflow-x-auto rounded-lg border border-slate-200 bg-white p-2 text-xs">
+      <nav className="sticky top-0 z-10 -mx-1 flex gap-1.5 overflow-x-auto rounded-lg border border-slate-200 bg-white p-2 pb-2 text-xs [-webkit-overflow-scrolling:touch]">
         {REGISTRY_MODULES.map((m) => (
-          <a key={m.id} href={`#${m.id}`} className="whitespace-nowrap rounded-md px-2 py-1 text-slate-700 hover:bg-teal-50 hover:text-teal-800">
+          <a
+            key={m.id}
+            href={`#${m.id}`}
+            className="whitespace-nowrap rounded-md px-3 py-2 text-slate-700 hover:bg-teal-50 hover:text-teal-800"
+          >
             {m.label}
           </a>
         ))}

@@ -40,36 +40,105 @@ export default async function PatientsPage({
           Patient record deleted. Dashboard counts have been updated.
         </div>
       ) : null}
-      <div className="mb-4 flex flex-wrap items-center gap-2.5">
-        {FILTERS.map((f) => {
-          const active = (params.filter ?? "ALL") === f.key || (!params.filter && f.key === "ALL");
-          const href =
-            f.key === "ALL"
-              ? `/patients${params.q ? `?q=${encodeURIComponent(params.q)}` : ""}`
-              : `/patients?filter=${f.key}${params.q ? `&q=${encodeURIComponent(params.q)}` : ""}`;
-          return (
-            <Link
-              key={f.key}
-              href={href}
-              className={`h-10 rounded-[10px] border-[1.5px] px-4 text-[13px] transition ${
-                active
-                  ? "border-[#0C4F4E] bg-[#0C4F4E] font-semibold text-white"
-                  : "border-[#E2DDD3] bg-white text-[#45524D]"
-              }`}
-            >
-              {f.label}
-            </Link>
-          );
-        })}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="flex w-full gap-2 overflow-x-auto pb-1 sm:w-auto sm:flex-wrap sm:overflow-visible sm:pb-0">
+          {FILTERS.map((f) => {
+            const active = (params.filter ?? "ALL") === f.key || (!params.filter && f.key === "ALL");
+            const href =
+              f.key === "ALL"
+                ? `/patients${params.q ? `?q=${encodeURIComponent(params.q)}` : ""}`
+                : `/patients?filter=${f.key}${params.q ? `&q=${encodeURIComponent(params.q)}` : ""}`;
+            return (
+              <Link
+                key={f.key}
+                href={href}
+                className={`inline-flex h-10 shrink-0 items-center rounded-[10px] border-[1.5px] px-4 text-[13px] transition ${
+                  active
+                    ? "border-[#0C4F4E] bg-[#0C4F4E] font-semibold text-white"
+                    : "border-[#E2DDD3] bg-white text-[#45524D]"
+                }`}
+              >
+                {f.label}
+              </Link>
+            );
+          })}
+        </div>
         <Link
           href="/patients/new"
-          className="ml-auto flex h-10 items-center gap-2 rounded-[10px] bg-[#0C4F4E] px-4 text-[13.5px] font-semibold text-white"
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-[10px] bg-[#0C4F4E] px-4 text-[13.5px] font-semibold text-white sm:ml-auto sm:h-10 sm:w-auto"
         >
           ＋ New patient
         </Link>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-[#EAE5DA] bg-white">
+      {/* Mobile cards */}
+      <div className="flex flex-col gap-3 lg:hidden">
+        {patients.map((p) => {
+          const pill = statusPill(p.workflowStatus);
+          const hiv =
+            p.hivStatus === "2"
+              ? { bg: "#F3E9EF", text: "#7A3B5E", label: "Positive" }
+              : { bg: "#EEF1EC", text: "#5C6B66", label: labelFor(HIV_STATUS, p.hivStatus) || "—" };
+          return (
+            <div
+              key={p.id}
+              className="rounded-2xl border border-[#EAE5DA] bg-white p-4 shadow-[0_1px_0_rgba(26,36,33,0.04)]"
+            >
+              <Link href={`/patients/${p.id}`} className="block">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[9px] bg-[#ECF3F2] text-sm font-semibold text-[#0C4F4E]">
+                    {p.initials}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[15px] font-semibold leading-snug">
+                      {p.surname}, {p.firstName}
+                    </div>
+                    <div className="font-mono-data mt-0.5 text-[12px] text-[#9aa5a0]">
+                      {p.displayId} · {p.age}y
+                    </div>
+                    <div className="mt-2 text-[13px] text-[#45524D]">{p.diagnosisLabel}</div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="font-mono-data rounded-full bg-[#F4F1EB] px-2 py-0.5 text-[11px] text-[#7C8983]">
+                        {labelFor(FIGO_STAGE, p.diagnosis?.figoStage) || "—"}
+                      </span>
+                      <span
+                        className="inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                        style={{ background: hiv.bg, color: hiv.text }}
+                      >
+                        {hiv.label}
+                      </span>
+                      <span
+                        className="inline-flex rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold"
+                        style={{ background: pill.bg, color: pill.text }}
+                      >
+                        {pill.label}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+              {canDelete ? (
+                <div className="mt-3 border-t border-[#F0ECE3] pt-3">
+                  <DeletePatientButton
+                    patientId={p.id}
+                    patientLabel={`${p.displayId} — ${p.surname}, ${p.firstName}`}
+                    variant="inline"
+                  />
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+        {patients.length === 0 ? (
+          <p className="py-12 text-center text-sm text-[#7C8983]">No patients match this filter.</p>
+        ) : null}
+        <div className="text-[12.5px] text-[#7C8983]">
+          Showing {patients.length} of {metrics.stats.total}
+        </div>
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden overflow-hidden rounded-2xl border border-[#EAE5DA] bg-white lg:block">
         <div className="grid grid-cols-[1.5fr_1fr_.7fr_.8fr_1fr_auto] gap-3 border-b border-[#EAE5DA] px-5 py-3.5 text-[11.5px] font-semibold tracking-wide text-[#9aa5a0] uppercase">
           <div className="col-span-5 grid grid-cols-[1.5fr_1fr_.7fr_.8fr_1fr] gap-3">
             <div>Patient</div>

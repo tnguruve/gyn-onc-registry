@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import {
@@ -15,12 +16,27 @@ import { logAudit } from "@/lib/audit";
 import { boolFromForm, codeFromForm } from "@/lib/codes";
 import { serializeCharlsonConditions } from "@/lib/comorbidities";
 import { calcBmi } from "@/lib/esgo-metrics";
-import { loginSchema } from "@/lib/validators";
+import { loginSchema, signupSchema } from "@/lib/validators";
 import { computeWorkflowStatus } from "@/lib/patient-workflow";
 import { buildInviteUrl, generateInviteToken, inviteExpiry } from "@/lib/invites";
 
 function redirectWithError(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
+}
+
+export type AuthFormState = { error: string } | null;
+
+const DB_ERROR_MSG =
+  "Database unavailable. Wake Neon (SQL Editor → SELECT 1), then restart the app.";
+
+function authErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    if (error.message.includes("Can't reach database")) {
+      return "Database asleep. Run SELECT 1 in Neon SQL Editor, then in Terminal: npm run restart:local";
+    }
+    return error.message;
+  }
+  return DB_ERROR_MSG;
 }
 
 function parseDate(value: FormDataEntryValue | null): Date | undefined {
@@ -93,23 +109,70 @@ function demographicsFromForm(formData: FormData, dob: Date) {
   };
 }
 
-export async function loginAction(formData: FormData) {
+export async function loginAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const parsed = loginSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
   });
-  if (!parsed.success) redirect("/login?error=Please+enter+a+valid+email+and+password");
+  if (!parsed.success) return { error: "Please enter a valid email and password" };
 
-  const user = await verifyCredentials(parsed.data.email, parsed.data.password);
-  if (!user) redirect("/login?error=Invalid+email+or+password");
+  try {
+    const user = await verifyCredentials(parsed.data.email, parsed.data.password);
+    if (!user) return { error: "Invalid email or password" };
 
-  await createSession({
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    role: user.role as import("@/lib/types").UserRole,
-  });
-  await logAudit({ userId: user.id, userEmail: user.email, action: "LOGIN", entityType: "User", entityId: user.id });
+    await createSession({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role as import("@/lib/types").UserRole,
+    });
+    await logAudit({ userId: user.id, userEmail: user.email, action: "LOGIN", entityType: "User", entityId: user.id });
+  } catch (error) {
+    if (isRedirectError(error)) throw error;
+    console.error("loginAction failed:", error);
+    return { error: authErrorMessage(error) };
+  }
+
+  redirect("/dashboard");
+}
+
+export async function signupAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirmPassword") ?? "");
+
+  const parsed = signupSchema.safeParse({ email, password });
+  if (!parsed.success) return { error: "Enter a valid email and password (8+ characters)" };
+  if (password !== confirm) return { error: "Passwords do not match" };
+
+  try {
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) return { error: "An account with this email already exists" };
+
+    const name = email.split("@")[0] || "User";
+    const user = await prisma.user.create({
+      data: {
+        email,
+        name,
+        role: "CLINICIAN",
+        passwordHash: await hashPassword(password),
+        active: true,
+      },
+    });
+
+    await createSession({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role as import("@/lib/types").UserRole,
+    });
+    await logAudit({ userId: user.id, userEmail: user.email, action: "SIGNUP", entityType: "User", entityId: user.id });
+  } catch (error) {
+    if (isRedirectError(error)) throw error;
+    console.error("signupAction failed:", error);
+    return { error: authErrorMessage(error) };
+  }
+
   redirect("/dashboard");
 }
 

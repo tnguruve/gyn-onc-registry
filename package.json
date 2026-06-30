@@ -4,6 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:mac": "ulimit -n 10240 2>/dev/null; next dev -H 127.0.0.1 -p 3000",
+    "test:db": "node scripts/test-db.mjs",
+    "start:local": "next build && next start -H 127.0.0.1 -p 3020",
+    "restart:local": "lsof -ti :3020 | xargs kill -9 2>/dev/null; npm run start:local",
     "build": "prisma generate && prisma db push && prisma db seed && next build",
     "start": "next start",
     "lint": "eslint",
