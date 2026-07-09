@@ -82,6 +82,7 @@ export function PatientRegistryChart({
   canDelete,
   savedModule,
   errorMessage,
+  notice,
 }: {
   patient: PatientRecord;
   customModules: CustomModuleForPatient[];
@@ -89,6 +90,7 @@ export function PatientRegistryChart({
   canDelete: boolean;
   savedModule?: string | null;
   errorMessage?: string | null;
+  notice?: string | null;
 }) {
   const delays = patient.referral ? calcDelays(patient.referral) : null;
   const survivalMetrics = calcSurvivalMetrics({
@@ -143,7 +145,7 @@ export function PatientRegistryChart({
         </div>
       </div>
 
-      <SaveFeedback saved={savedModule} error={errorMessage} />
+      <SaveFeedback saved={savedModule} error={errorMessage} notice={notice} />
 
       {!canWrite && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -696,7 +698,11 @@ export function PatientRegistryChart({
         </ModuleEditShell>
       </ModuleCard>
 
-      <ModuleCard id="research" title="Module 13 — Research / biobank">
+      <ModuleCard
+        id="research"
+        title="Module 13 — Research / biobank"
+        description="Consent flags sync to the Research tab (charts and export)"
+      >
         <ModuleEditShell
           canWrite={canWrite}
           hasData={Boolean(patient.research?.consentForResearch || patient.research?.tissueBank)}

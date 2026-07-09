@@ -14,11 +14,21 @@ const SAVED_LABELS: Record<string, string> = {
 export function SaveFeedback({
   saved,
   error,
+  notice,
 }: {
   saved?: string | null;
   error?: string | null;
+  notice?: string | null;
 }) {
-  if (!saved && !error) return null;
+  if (!saved && !error && !notice) return null;
+
+  if (notice === "existing-national-id") {
+    return (
+      <div className="rounded-lg border border-[#D5E4E2] bg-[#ECF3F2] px-4 py-3 text-sm text-[#0C4F4E]">
+        This national ID is already registered — opened the existing patient record.
+      </div>
+    );
+  }
 
   if (error) {
     return (

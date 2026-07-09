@@ -1,5 +1,6 @@
 "use server";
 
+import { Prisma } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { revalidatePath } from "next/cache";
@@ -8,6 +9,7 @@ import {
   createSession,
   generateRegistryNumber,
   hashPassword,
+  parseUserRole,
   requirePermission,
   requireSession,
   verifyCredentials,
@@ -16,7 +18,11 @@ import { logAudit } from "@/lib/audit";
 import { boolFromForm, codeFromForm } from "@/lib/codes";
 import { serializeCharlsonConditions } from "@/lib/comorbidities";
 import { calcBmi } from "@/lib/esgo-metrics";
-import { loginSchema, signupSchema } from "@/lib/validators";
+import { normalizeNationalId, findPatientByNationalId } from "@/lib/patient-identity";
+import { formatRegistryDisplay } from "@/lib/patient-workflow";
+import { loginSchema } from "@/lib/validators";
+import { USER_ROLES } from "@/lib/types";
+import { z } from "zod";
 import { computeWorkflowStatus } from "@/lib/patient-workflow";
 import { buildInviteUrl, generateInviteToken, inviteExpiry } from "@/lib/invites";
 import { MDT_INITIAL_TYPE } from "@/lib/mdt";
@@ -65,6 +71,15 @@ function patientPath(id: string) {
   return `/patients/${id}`;
 }
 
+function isRegistryNumberConflict(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002" &&
+    Array.isArray(error.meta?.target) &&
+    (error.meta.target as string[]).includes("registryNumber")
+  );
+}
+
 async function refreshRegistryViews(patientId?: string) {
   if (patientId) {
     const full = await prisma.patient.findUnique({
@@ -88,7 +103,7 @@ function demographicsFromForm(formData: FormData, dob: Date) {
   const charlson = formData.getAll("charlson").map(String);
   return {
     hospitalNumber: String(formData.get("hospitalNumber") ?? "").trim() || undefined,
-    nationalId: String(formData.get("nationalId") ?? "").trim() || undefined,
+    nationalId: normalizeNationalId(formData.get("nationalId")),
     firstName: String(formData.get("firstName") ?? "").trim(),
     surname: String(formData.get("surname") ?? "").trim(),
     dateOfBirth: dob,
@@ -122,11 +137,16 @@ export async function loginAction(_prev: AuthFormState, formData: FormData): Pro
     const user = await verifyCredentials(parsed.data.email, parsed.data.password);
     if (!user) return { error: "Invalid email or password" };
 
+    const role = parseUserRole(user.role);
+    if (!role) {
+      return { error: "This account has an invalid role. Run /setup or contact your administrator." };
+    }
+
     await createSession({
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role as import("@/lib/types").UserRole,
+      role,
     });
     await logAudit({ userId: user.id, userEmail: user.email, action: "LOGIN", entityType: "User", entityId: user.id });
   } catch (error) {
@@ -139,43 +159,8 @@ export async function loginAction(_prev: AuthFormState, formData: FormData): Pro
 }
 
 export async function signupAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const password = String(formData.get("password") ?? "");
-  const confirm = String(formData.get("confirmPassword") ?? "");
-
-  const parsed = signupSchema.safeParse({ email, password });
-  if (!parsed.success) return { error: "Enter a valid email and password (8+ characters)" };
-  if (password !== confirm) return { error: "Passwords do not match" };
-
-  try {
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) return { error: "An account with this email already exists" };
-
-    const name = email.split("@")[0] || "User";
-    const user = await prisma.user.create({
-      data: {
-        email,
-        name,
-        role: "CLINICIAN",
-        passwordHash: await hashPassword(password),
-        active: true,
-      },
-    });
-
-    await createSession({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role as import("@/lib/types").UserRole,
-    });
-    await logAudit({ userId: user.id, userEmail: user.email, action: "SIGNUP", entityType: "User", entityId: user.id });
-  } catch (error) {
-    if (isRedirectError(error)) throw error;
-    console.error("signupAction failed:", error);
-    return { error: authErrorMessage(error) };
-  }
-
-  redirect("/dashboard");
+  void formData;
+  return { error: "New accounts are not available. Use your Dr. Guzha registry login." };
 }
 
 export async function createPatientAction(formData: FormData) {
@@ -185,15 +170,37 @@ export async function createPatientAction(formData: FormData) {
   const dob = parseDate(formData.get("dateOfBirth"));
   if (!firstName || !surname || !dob) redirectWithError("/patients/new", "First name, surname and date of birth are required");
 
-  const registryNumber = await generateRegistryNumber();
-  const patient = await prisma.patient.create({
-    data: {
-      registryNumber,
-      ...demographicsFromForm(formData, dob),
-    },
-  });
+  const nationalId = normalizeNationalId(formData.get("nationalId"));
+  if (nationalId) {
+    const existing = await findPatientByNationalId(nationalId);
+    if (existing) {
+      redirect(`${patientPath(existing.id)}?notice=existing-national-id`);
+    }
+  }
 
-  await logAudit({ userId: session.id, userEmail: session.email, action: "CREATE", entityType: "Patient", entityId: patient.id, details: registryNumber });
+  const registryNumber = await generateRegistryNumber();
+  let patient;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const candidate =
+      attempt === 0 ? registryNumber : await generateRegistryNumber();
+    try {
+      patient = await prisma.patient.create({
+        data: {
+          registryNumber: candidate,
+          ...demographicsFromForm(formData, dob),
+        },
+      });
+      break;
+    } catch (error) {
+      if (isRegistryNumberConflict(error) && attempt < 4) continue;
+      if (isRegistryNumberConflict(error)) {
+        redirectWithError("/patients/new", "Could not assign a registry number. Please try again.");
+      }
+      throw error;
+    }
+  }
+  if (!patient) redirectWithError("/patients/new", "Could not create patient. Please try again.");
+  await logAudit({ userId: session.id, userEmail: session.email, action: "CREATE", entityType: "Patient", entityId: patient.id, details: patient.registryNumber });
   await refreshRegistryViews(patient.id);
   redirect(patientPath(patient.id));
 }
@@ -203,9 +210,20 @@ export async function updateDemographicsAction(patientId: string, formData: Form
   const dob = parseDate(formData.get("dateOfBirth"));
   if (!dob) redirectWithError(patientPath(patientId), "Date of birth is required");
 
+  const data = demographicsFromForm(formData, dob);
+  if (data.nationalId) {
+    const existing = await findPatientByNationalId(data.nationalId, patientId);
+    if (existing) {
+      redirectWithError(
+        patientPath(patientId),
+        `National ID already registered under ${formatRegistryDisplay(existing.registryNumber)} (${existing.firstName} ${existing.surname}).`,
+      );
+    }
+  }
+
   await prisma.patient.update({
     where: { id: patientId },
-    data: demographicsFromForm(formData, dob),
+    data,
   });
   await logAudit({ userId: session.id, userEmail: session.email, action: "UPDATE", entityType: "Patient", entityId: patientId });
   await refreshRegistryViews(patientId);
@@ -529,7 +547,8 @@ export async function createInviteAction(formData: FormData) {
   const session = await requirePermission("admin:users");
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const role = String(formData.get("role") ?? "CLINICIAN");
+  const roleParsed = z.enum(USER_ROLES).safeParse(String(formData.get("role") ?? "CLINICIAN"));
+  const role = roleParsed.success ? roleParsed.data : "CLINICIAN";
 
   if (!name || !email) redirectWithError("/admin", "Name and email are required");
 

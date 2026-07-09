@@ -1,51 +1,30 @@
 import bcrypt from "bcryptjs";
 import type { PrismaClient } from "@prisma/client";
 
+export const GUZHA_EMAIL = "clinician@registry.local";
+export const GUZHA_DEFAULT_PASSWORD = "Clinician123!";
+
 async function hash(password: string) {
   return bcrypt.hash(password, 12);
 }
 
 export async function seedRegistry(prisma: PrismaClient) {
-  const adminEmail = "admin@registry.local";
-  const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
+  const existing = await prisma.user.findUnique({ where: { email: GUZHA_EMAIL } });
 
   if (!existing) {
-    await prisma.user.createMany({
-      data: [
-        {
-          email: adminEmail,
-          name: "System Administrator",
-          passwordHash: await hash("Admin123!"),
-          role: "ADMIN",
-          active: true,
-        },
-        {
-          email: "clinician@registry.local",
-          name: "Dr. Guzha",
-          passwordHash: await hash("Clinician123!"),
-          role: "CLINICIAN",
-          active: true,
-        },
-        {
-          email: "frontdesk@registry.local",
-          name: "Front Desk Staff",
-          passwordHash: await hash("Frontdesk123!"),
-          role: "FRONT_DESK",
-          active: true,
-        },
-        {
-          email: "researcher@registry.local",
-          name: "Research Analyst",
-          passwordHash: await hash("Research123!"),
-          role: "RESEARCHER",
-          active: true,
-        },
-      ],
+    await prisma.user.create({
+      data: {
+        email: GUZHA_EMAIL,
+        name: "Dr. Guzha",
+        passwordHash: await hash(GUZHA_DEFAULT_PASSWORD),
+        role: "ADMIN",
+        active: true,
+      },
     });
   } else {
     await prisma.user.update({
-      where: { email: "clinician@registry.local" },
-      data: { name: "Dr. Guzha" },
+      where: { email: GUZHA_EMAIL },
+      data: { name: "Dr. Guzha", role: "ADMIN", active: true },
     });
   }
 
@@ -161,11 +140,7 @@ export async function seedRegistry(prisma: PrismaClient) {
   }
 
   return {
-    message: existing ? "Demo data ready" : "Seed users and demo patient created",
-    accounts: [
-      { email: adminEmail, password: "Admin123!", role: "ADMIN" },
-      { email: "clinician@registry.local", password: "Clinician123!", role: "CLINICIAN" },
-      { email: "researcher@registry.local", password: "Research123!", role: "RESEARCHER" },
-    ],
+    message: existing ? "Demo data ready" : "Dr. Guzha account and demo patient created",
+    accounts: [{ email: GUZHA_EMAIL, password: GUZHA_DEFAULT_PASSWORD, role: "ADMIN" }],
   };
 }

@@ -26,6 +26,7 @@ export default async function PatientsPage({
 }) {
   const user = await requireSession();
   const canDelete = hasPermission(user.role, "patients:delete");
+  const canCreate = hasPermission(user.role, "patients:create");
   const params = await searchParams;
   const raw = await loadDashboardPatients();
   const metrics = buildDashboardMetrics(raw);
@@ -63,12 +64,14 @@ export default async function PatientsPage({
             );
           })}
         </div>
-        <Link
-          href="/patients/new"
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-[10px] bg-[#0C4F4E] px-4 text-[13.5px] font-semibold text-white sm:ml-auto sm:h-10 sm:w-auto"
-        >
-          ＋ New patient
-        </Link>
+        {canCreate ? (
+          <Link
+            href="/patients/new"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-[10px] bg-[#0C4F4E] px-4 text-[13.5px] font-semibold text-white sm:ml-auto sm:h-10 sm:w-auto"
+          >
+            ＋ New patient
+          </Link>
+        ) : null}
       </div>
 
       {/* Mobile cards */}
@@ -130,7 +133,14 @@ export default async function PatientsPage({
           );
         })}
         {patients.length === 0 ? (
-          <p className="py-12 text-center text-sm text-[#7C8983]">No patients match this filter.</p>
+          <div className="py-12 text-center text-sm text-[#7C8983]">
+            <p>No patients match this filter.</p>
+            {canCreate ? (
+              <Link href="/patients/new" className="mt-3 inline-block font-semibold text-[#0C4F4E] underline">
+                ＋ Register new patient
+              </Link>
+            ) : null}
+          </div>
         ) : null}
         <div className="text-[12.5px] text-[#7C8983]">
           Showing {patients.length} of {metrics.stats.total}
@@ -207,7 +217,14 @@ export default async function PatientsPage({
           );
         })}
         {patients.length === 0 ? (
-          <p className="py-12 text-center text-sm text-[#7C8983]">No patients match this filter.</p>
+          <div className="py-12 text-center text-sm text-[#7C8983]">
+            <p>No patients match this filter.</p>
+            {canCreate ? (
+              <Link href="/patients/new" className="mt-3 inline-block font-semibold text-[#0C4F4E] underline">
+                ＋ Register new patient
+              </Link>
+            ) : null}
+          </div>
         ) : null}
         <div className="px-5 py-3 text-[12.5px] text-[#7C8983]">
           Showing {patients.length} of {metrics.stats.total}

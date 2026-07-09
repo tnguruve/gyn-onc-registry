@@ -5,10 +5,30 @@ import { statusPill } from "@/lib/status-pills";
 export default async function DashboardPage() {
   const patients = await loadDashboardPatients();
   const metrics = buildDashboardMetrics(patients);
-  const { stats, registrations, diagnosisDistribution, recentPatients, tasks } = metrics;
+  const { stats, recentPatients, tasks } = metrics;
 
   return (
     <div className="space-y-5">
+      <div className="rounded-2xl border border-[#D5E4E2] bg-[#ECF3F2] px-5 py-4 text-sm text-[#0C4F4E]">
+        <p className="font-semibold">Front desk — patient entry</p>
+        <ol className="mt-2 list-decimal space-y-1 pl-5 text-[#45524D]">
+          <li>
+            Open <Link href="/patients" className="underline">Patients</Link> →{" "}
+            <strong>＋ New patient</strong> (Module 1)
+          </li>
+          <li>Open their chart → complete modules 2–13 (diagnosis, surgery, follow-up)</li>
+          <li>
+            Tick <strong>Module 13 — Research / biobank</strong> when consent is obtained
+          </li>
+          <li>
+            Charts and CSV export update automatically in{" "}
+            <Link href="/research" className="underline">
+              Research
+            </Link>
+          </li>
+        </ol>
+      </div>
+
       <div className="grid grid-cols-1 gap-3.5 min-[480px]:grid-cols-2 lg:grid-cols-5">
         <StatCard
           label="Total patients"
@@ -45,53 +65,6 @@ export default async function DashboardPage() {
           deltaColor={stats.drafts > 0 ? "#9A6B17" : "#7C8983"}
           href="/patients?filter=DRAFT"
         />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
-        <div className="rounded-2xl border border-[#EAE5DA] bg-white p-5">
-          <div className="mb-5 flex items-baseline justify-between">
-            <div className="text-[15px] font-semibold">Registrations</div>
-            <div className="text-[12.5px] text-[#7C8983]">
-              Last 12 months · <span className="font-semibold text-[#0C4F4E]">{stats.total} total</span>
-            </div>
-          </div>
-          <div className="flex h-[150px] items-end gap-2">
-            {registrations.map((m) => (
-              <div key={m.label} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
-                <div
-                  className="chart-bar w-full max-w-[28px] rounded-t-[5px]"
-                  style={{ height: `${m.heightPct}%`, background: m.bg }}
-                  title={`${m.count} registrations`}
-                />
-                <div className="text-[11px] text-[#9aa5a0]">{m.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-[#EAE5DA] bg-white p-5">
-          <div className="mb-4 text-[15px] font-semibold">Diagnosis distribution</div>
-          <div className="flex flex-col gap-3.5">
-            {diagnosisDistribution.map((d) => (
-              <Link
-                key={d.label}
-                href={`/patients?q=${encodeURIComponent(d.searchTerm)}`}
-                className="block transition-opacity hover:opacity-80"
-              >
-                <div className="mb-1.5 flex justify-between text-[13px]">
-                  <span>{d.label}</span>
-                  <span className="font-mono-data text-[#7C8983]">{d.pct}%</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded bg-[#F0ECE3]">
-                  <div className="h-full rounded" style={{ width: `${d.widthPct}%`, background: d.bg }} />
-                </div>
-              </Link>
-            ))}
-            {diagnosisDistribution.every((d) => d.count === 0) ? (
-              <p className="text-sm text-[#7C8983]">No diagnoses recorded yet.</p>
-            ) : null}
-          </div>
-        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">

@@ -57,6 +57,7 @@ export default async function NewPatientPage({
               <FormField>
                 <Label htmlFor="nationalId">National ID</Label>
                 <Input id="nationalId" name="nationalId" />
+                <p className="mt-1 text-xs text-slate-500">Same national ID means the same person.</p>
               </FormField>
             </FormRow>
             <FormRow>

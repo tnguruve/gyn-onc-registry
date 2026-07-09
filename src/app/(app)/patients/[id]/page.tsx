@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
@@ -13,7 +13,7 @@ export default async function PatientChartPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ saved?: string; error?: string }>;
+  searchParams: Promise<{ saved?: string; error?: string; notice?: string }>;
 }) {
   const user = await requireSession();
   const { id } = await params;
@@ -41,7 +41,7 @@ export default async function PatientChartPage({
 
   if (!patient) notFound();
   if (!hasPermission(user.role, "patients:read")) {
-    notFound();
+    redirect("/dashboard?error=access-denied");
   }
 
   const customModulesRaw = await prisma.customModule.findMany({
@@ -72,6 +72,7 @@ export default async function PatientChartPage({
       canDelete={hasPermission(user.role, "patients:delete")}
       savedModule={query.saved}
       errorMessage={query.error}
+      notice={query.notice}
     />
   );
 }

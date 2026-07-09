@@ -2,7 +2,7 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
-import { type UserRole } from "@/lib/types";
+import { type UserRole, USER_ROLES } from "@/lib/types";
 import { prisma } from "@/lib/db";
 import { hasPermission, type Permission } from "@/lib/permissions";
 
@@ -54,6 +54,11 @@ export async function destroySession() {
   cookieStore.delete(COOKIE_NAME);
 }
 
+export function parseUserRole(role: string): UserRole | null {
+  const normalized = role.trim().toUpperCase().replace(/[\s-]+/g, "_");
+  return USER_ROLES.includes(normalized as UserRole) ? (normalized as UserRole) : null;
+}
+
 export async function getSession(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
@@ -61,15 +66,33 @@ export async function getSession(): Promise<SessionUser | null> {
 
   try {
     const { payload } = await jwtVerify(token, getSecret());
-    if (!payload.sub || !payload.email || !payload.name || !payload.role) {
-      return null;
-    }
-    return {
-      id: payload.sub,
-      email: String(payload.email),
-      name: String(payload.name),
-      role: payload.role as UserRole,
+    if (!payload.sub) return null;
+
+    const user = await prisma.user.findUnique({
+      where: { id: String(payload.sub) },
+      select: { id: true, email: true, name: true, role: true, active: true },
+    });
+    if (!user?.active) return null;
+
+    const role = parseUserRole(user.role);
+    if (!role) return null;
+
+    const session: SessionUser = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role,
     };
+
+    if (
+      payload.email !== user.email ||
+      payload.name !== user.name ||
+      payload.role !== user.role
+    ) {
+      await createSession(session);
+    }
+
+    return session;
   } catch {
     return null;
   }
@@ -101,16 +124,23 @@ export async function hashPassword(password: string) {
   return bcrypt.hash(password, 12);
 }
 
+function parseRegistryNumeric(registryNumber: string): number | null {
+  const match = registryNumber.trim().match(/^GYN-?(\d+)$/i);
+  if (!match) return null;
+  const num = Number(match[1]);
+  return Number.isNaN(num) ? null : num;
+}
+
 export async function generateRegistryNumber(): Promise<string> {
-  const latest = await prisma.patient.findFirst({
-    orderBy: { registryNumber: "desc" },
+  const patients = await prisma.patient.findMany({
+    select: { registryNumber: true },
   });
 
-  let next = 1;
-  if (latest?.registryNumber) {
-    const num = Number(latest.registryNumber.replace(/^GYN-?/i, ""));
-    if (!Number.isNaN(num)) next = num + 1;
+  let max = 0;
+  for (const { registryNumber } of patients) {
+    const num = parseRegistryNumeric(registryNumber);
+    if (num != null && num > max) max = num;
   }
 
-  return `GYN-${String(next).padStart(4, "0")}`;
+  return `GYN-${String(max + 1).padStart(4, "0")}`;
 }

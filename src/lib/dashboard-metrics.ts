@@ -195,9 +195,9 @@ function buildTasks(
   const monthName = new Date().toLocaleString("en", { month: "long", year: "numeric" });
   tasks.push({
     icon: "⤓",
-    title: "Monthly export ready",
-    subtitle: `${monthName} cohort available`,
-    href: "/reports",
+    title: "Research data ready",
+    subtitle: `${monthName} — view charts and export`,
+    href: "/research",
     bg: "#E7F1EE",
     color: "#0C5C4E",
   });

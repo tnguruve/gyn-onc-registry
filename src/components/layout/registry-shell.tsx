@@ -4,14 +4,32 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import type { SessionUser } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 
-const NAV = [
-  { href: "/dashboard", label: "Dashboard", icon: "▦" },
-  { href: "/patients", label: "Patients", icon: "❏", badgeKey: "patients" as const },
-  { href: "/patients/new", label: "New patient", icon: "＋" },
-  { href: "/builder", label: "Module builder", icon: "⚙", modulesOnly: true as const },
-  { href: "/reports", label: "Export & research", icon: "⤓" },
-  { href: "/admin", label: "Admin", icon: "☷", adminOnly: true },
+type NavItem = {
+  href: string;
+  label: string;
+  icon: string;
+  permission?: import("@/lib/permissions").Permission;
+  badgeKey?: "patients";
+};
+
+const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
+  {
+    title: "Clinical",
+    items: [
+      { href: "/dashboard", label: "Front desk", icon: "▦" },
+      { href: "/patients", label: "Patients", icon: "❏", badgeKey: "patients" },
+      { href: "/builder", label: "Module builder", icon: "⚙", permission: "modules:manage" },
+    ],
+  },
+  {
+    title: "Research",
+    items: [
+      { href: "/research", label: "Research", icon: "◈", permission: "reports:read" },
+      { href: "/admin", label: "Activity log", icon: "☷", permission: "admin:users" },
+    ],
+  },
 ];
 
 export function RegistryShell({
@@ -29,9 +47,6 @@ export function RegistryShell({
   const [search, setSearch] = useState(searchParams.get("q") ?? "");
   const [navOpen, setNavOpen] = useState(false);
 
-  const isAdmin = user.role === "ADMIN";
-  const canManageModules = user.role === "ADMIN" || user.role === "CLINICIAN";
-
   useEffect(() => {
     setNavOpen(false);
   }, [pathname]);
@@ -46,10 +61,10 @@ export function RegistryShell({
   function isActive(href: string) {
     if (href === "/dashboard") return pathname === "/dashboard";
     if (href === "/patients")
-      return pathname === "/patients" || (pathname.startsWith("/patients/") && !pathname.startsWith("/patients/new"));
-    if (href === "/patients/new") return pathname === "/patients/new";
+      return pathname === "/patients" || pathname.startsWith("/patients/");
     if (href === "/admin") return pathname.startsWith("/admin");
-    if (href === "/reports") return pathname === "/reports";
+    if (href === "/reports" || href === "/research")
+      return pathname === "/research" || pathname === "/reports" || pathname.startsWith("/research/");
     return pathname === href;
   }
 
@@ -68,11 +83,10 @@ export function RegistryShell({
     .slice(0, 2)
     .toUpperCase();
 
-  const navItems = NAV.filter((item) => {
-    if (item.adminOnly && !isAdmin) return false;
-    if ("modulesOnly" in item && item.modulesOnly && !canManageModules) return false;
-    return true;
-  });
+  const navGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => !item.permission || hasPermission(user.role, item.permission)),
+  })).filter((group) => group.items.length > 0);
 
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-[#F4F1EB] text-[#1A2421]">
@@ -112,43 +126,39 @@ export function RegistryShell({
           </button>
         </div>
 
-        <nav className="mt-1.5 flex flex-col gap-0.5 overflow-y-auto">
-          {navItems.map((item) => {
-            if ("disabled" in item && item.disabled) {
-              return (
-                <div
-                  key={item.label}
-                  className="flex min-h-[44px] items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm text-[rgba(234,242,240,0.4)]"
-                  title="Coming in v2"
-                >
-                  <span className="w-5 text-center text-[15px] opacity-90">{item.icon}</span>
-                  <span>{item.label}</span>
-                  <span className="ml-auto text-[10px]">Soon</span>
-                </div>
-              );
-            }
-            const active = isActive(item.href);
-            const badge = item.badgeKey === "patients" && patientsBadge ? patientsBadge : null;
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={`flex min-h-[44px] items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm transition-colors ${
-                  active
-                    ? "bg-[rgba(234,242,240,0.14)] font-semibold text-white"
-                    : "text-[rgba(234,242,240,0.72)] hover:bg-[rgba(234,242,240,0.08)]"
-                }`}
-              >
-                <span className="w-5 text-center text-[15px] opacity-90">{item.icon}</span>
-                <span>{item.label}</span>
-                {badge ? (
-                  <span className="ml-auto rounded-full bg-[#7A3B5E] px-2 py-0.5 text-[11px] font-semibold text-white">
-                    {badge}
-                  </span>
-                ) : null}
-              </Link>
-            );
-          })}
+        <nav className="mt-1.5 flex flex-col gap-4 overflow-y-auto">
+          {navGroups.map((group) => (
+            <div key={group.title}>
+              <div className="px-3 pb-1.5 text-[10px] font-semibold tracking-widest text-[rgba(234,242,240,0.45)] uppercase">
+                {group.title}
+              </div>
+              <div className="flex flex-col gap-0.5">
+                {group.items.map((item) => {
+                  const active = isActive(item.href);
+                  const badge = item.badgeKey === "patients" && patientsBadge ? patientsBadge : null;
+                  return (
+                    <Link
+                      key={item.label}
+                      href={item.href}
+                      className={`flex min-h-[44px] items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm transition-colors ${
+                        active
+                          ? "bg-[rgba(234,242,240,0.14)] font-semibold text-white"
+                          : "text-[rgba(234,242,240,0.72)] hover:bg-[rgba(234,242,240,0.08)]"
+                      }`}
+                    >
+                      <span className="w-5 text-center text-[15px] opacity-90">{item.icon}</span>
+                      <span>{item.label}</span>
+                      {badge ? (
+                        <span className="ml-auto rounded-full bg-[#7A3B5E] px-2 py-0.5 text-[11px] font-semibold text-white">
+                          {badge}
+                        </span>
+                      ) : null}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         <div className="mt-auto flex items-center gap-3 border-t border-[rgba(234,242,240,0.14)] pt-3.5">
@@ -157,7 +167,7 @@ export function RegistryShell({
           </div>
           <div className="min-w-0 flex-1">
             <div className="truncate text-[13px] font-semibold">{user.name}</div>
-            <div className="text-[11.5px] text-[rgba(234,242,240,0.55)]">Registry Clinician</div>
+            <div className="text-[11.5px] text-[rgba(234,242,240,0.55)]">Parirenyatwa Gyn Onc</div>
           </div>
           <form action="/api/auth/logout" method="POST">
             <button type="submit" className="min-h-[44px] min-w-[44px] text-[rgba(234,242,240,0.6)]" title="Sign out">
@@ -210,12 +220,14 @@ export function RegistryShell({
 }
 
 function pageTitle(pathname: string) {
-  if (pathname === "/dashboard") return { title: "Dashboard", sub: "Overview of registry activity" };
+  if (pathname === "/dashboard") return { title: "Front desk", sub: "Register patients and manage the clinic day" };
   if (pathname === "/patients") return { title: "Patients", sub: "Search and open patient charts" };
-  if (pathname === "/patients/new") return { title: "New patient", sub: "Register a new registry case" };
-  if (pathname.startsWith("/patients/")) return { title: "Patient record", sub: "Clinical modules and audit trail" };
-  if (pathname === "/reports") return { title: "Export & research", sub: "De-identified data export" };
+  if (pathname === "/patients/new") return { title: "New patient", sub: "Module 1 — registration" };
+  if (pathname.startsWith("/patients/")) return { title: "Patient record", sub: "Enter and edit clinical modules" };
+  if (pathname === "/research" || pathname === "/reports")
+    return { title: "Research", sub: "Charts and export — synced from patient data" };
+  if (pathname === "/research/report") return { title: "Registry report", sub: "Printable ethics summary" };
   if (pathname === "/builder") return { title: "Module builder", sub: "Add and edit custom registry modules" };
-  if (pathname.startsWith("/admin")) return { title: "Admin", sub: "Invites, users, and audit" };
+  if (pathname.startsWith("/admin")) return { title: "Activity log", sub: "Sign-ins, edits, and exports" };
   return { title: "Registry", sub: "" };
 }

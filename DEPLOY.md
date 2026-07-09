@@ -60,11 +60,9 @@ He will see **Dr. Guzha** in the header and can open **GYN0001 — Moyo, Tariro*
 
 ### Optional logins
 
-| Role | Email | Password |
-|------|-------|----------|
-| Clinician | clinician@registry.local | Clinician123! |
-| Researcher (export) | researcher@registry.local | Research123! |
-| Admin | admin@registry.local | Admin123! |
+| Account | Email | Password |
+|---------|-------|----------|
+| Dr. Guzha | clinician@registry.local | Clinician123! |
 
 ## Production notes (Zimbabwe)
 

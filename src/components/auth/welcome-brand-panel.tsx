@@ -8,7 +8,7 @@ type WelcomeBrandPanelProps = {
   headerAuthTabs?: ReactNode;
 };
 
-function WelcomeBrandPanelInner({ headerAuthTabs }: WelcomeBrandPanelProps) {
+function WelcomeBrandPanelInner(_props: WelcomeBrandPanelProps) {
   const reducedMotion = useReducedMotion();
   const panelRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -79,7 +79,6 @@ function WelcomeBrandPanelInner({ headerAuthTabs }: WelcomeBrandPanelProps) {
 
       <div className="welcome-stagger-item relative flex items-start justify-between gap-3" style={{ animationDelay: "0.06s" }}>
         <BrandLogo />
-        {headerAuthTabs ? <div className="shrink-0">{headerAuthTabs}</div> : null}
       </div>
 
       <div className="relative my-6 lg:my-0">
@@ -99,8 +98,7 @@ function WelcomeBrandPanelInner({ headerAuthTabs }: WelcomeBrandPanelProps) {
           className="welcome-stagger-item max-w-[40ch] text-[15px] leading-relaxed text-[rgba(234,242,240,0.74)] sm:text-[16.5px]"
           style={{ animationDelay: "0.24s" }}
         >
-          A structured registry for patient care, multidisciplinary review, and research-grade outcomes — built for
-          the people who run the clinic.
+          A structured registry for patient care at Parirenyatwa — register cases, complete modules, and export data when you need it.
         </p>
         <div
           className="welcome-stagger-item mt-8 flex flex-wrap gap-6 sm:gap-8 lg:mt-10"

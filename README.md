@@ -36,17 +36,16 @@ Visit **http://localhost:3000/setup** if users are missing, then **http://localh
 
 > **Deploy online for Dr. Guzha?** See **[DEPLOY.md](./DEPLOY.md)** (Vercel + Neon, ~15 min).
 
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@registry.local | Admin123! |
-| Clinician (Dr. Guzha) | clinician@registry.local | Clinician123! |
-| Researcher | researcher@registry.local | Research123! |
+| Account | Email | Password |
+|---------|-------|----------|
+| Dr. Guzha | clinician@registry.local | Clinician123! |
 
-## Research access
+## Export data
 
-1. Sign in as **Researcher** (or Admin)  
-2. Go to **Reports & Export** (`/reports`)  
-3. Download **de-identified CSV** — includes coded variables + auto delays and survival days  
+Use the same login:
+
+1. Sidebar → **Export data** (`/reports`)  
+2. Download **de-identified CSV**  
 
 ## Dashboard indicators
 
