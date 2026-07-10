@@ -160,7 +160,7 @@ export async function loginAction(_prev: AuthFormState, formData: FormData): Pro
 
 export async function signupAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
   void formData;
-  return { error: "New accounts are not available. Use your Dr. Guzha registry login." };
+  return { error: "New accounts are not available. Use your registry login." };
 }
 
 export async function createPatientAction(formData: FormData) {

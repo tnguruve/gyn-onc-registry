@@ -15,7 +15,7 @@ export async function seedRegistry(prisma: PrismaClient) {
     await prisma.user.create({
       data: {
         email: GUZHA_EMAIL,
-        name: "Dr. Guzha",
+        name: "Registry Admin",
         passwordHash: await hash(GUZHA_DEFAULT_PASSWORD),
         role: "ADMIN",
         active: true,
@@ -24,7 +24,7 @@ export async function seedRegistry(prisma: PrismaClient) {
   } else {
     await prisma.user.update({
       where: { email: GUZHA_EMAIL },
-      data: { name: "Dr. Guzha", role: "ADMIN", active: true },
+      data: { name: "Registry Admin", role: "ADMIN", active: true },
     });
   }
 
@@ -95,7 +95,7 @@ export async function seedRegistry(prisma: PrismaClient) {
       data: {
         patientId: patient.id,
         surgeryDate: new Date("2025-11-05"),
-        surgeon: "Dr. Guzha",
+        surgeon: "Dr. Ncube",
         procedure: "Radical hysterectomy",
         approach: "1",
         ccScore: "0",
@@ -140,7 +140,7 @@ export async function seedRegistry(prisma: PrismaClient) {
   }
 
   return {
-    message: existing ? "Demo data ready" : "Dr. Guzha account and demo patient created",
+    message: existing ? "Demo data ready" : "Registry account and demo patient created",
     accounts: [{ email: GUZHA_EMAIL, password: GUZHA_DEFAULT_PASSWORD, role: "ADMIN" }],
   };
 }

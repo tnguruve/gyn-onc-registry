@@ -66,7 +66,7 @@ function WelcomeIntro({ onContinue }: { onContinue: () => void }) {
     <>
       <div className="font-mono-data mb-4 text-xs tracking-[2px] text-[#7A3B5E] uppercase">Parirenyatwa</div>
       <h2 className="font-display mb-3.5 text-[34px] leading-[1.15] font-semibold tracking-tight">
-        Dr. Guzha&apos;s registry
+        Gynaecological Oncology Registry
       </h2>
       <p className="mb-9 text-[15.5px] leading-relaxed text-[#5C6B66]">
         One place to register patients, complete clinical modules, and download research data. Sign in with your
@@ -101,7 +101,7 @@ function LoginForm({
         </button>
       ) : null}
       <h2 className="font-display mb-2 text-[30px] font-semibold tracking-tight">Sign in</h2>
-      <p className="mb-7 text-[14.5px] text-[#5C6B66]">Dr. Guzha&apos;s registry account.</p>
+      <p className="mb-7 text-[14.5px] text-[#5C6B66]">Gynaecological oncology registry account.</p>
       <form action={action} className="space-y-5">
         <Field
           label="Email"

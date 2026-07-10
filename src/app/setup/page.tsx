@@ -42,7 +42,7 @@ export default function SetupPage() {
             <ul className="mt-2 space-y-1 font-mono text-xs">
               <li>clinician@registry.local / Clinician123!</li>
             </ul>
-            <p className="mt-3 text-xs text-slate-500">One account for Dr. Guzha — patients, modules, and export.</p>
+            <p className="mt-3 text-xs text-slate-500">Default clinician account — patients, modules, and export.</p>
           </div>
           <Link href="/login" className="text-sm text-teal-700 underline">
             Back to login
