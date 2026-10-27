@@ -1,4 +1,11 @@
-export const USER_ROLES = ["ADMIN", "CLINICIAN", "FRONT_DESK", "RESEARCHER"] as const;
+export const USER_ROLES = [
+  "ADMIN",
+  "CLINICIAN",
+  "FRONT_DESK",
+  "RESEARCHER",
+  "MDT_COORDINATOR",
+  "DATA_MANAGER",
+] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 
 export const SEX_OPTIONS = ["FEMALE", "MALE", "OTHER", "UNKNOWN"] as const;

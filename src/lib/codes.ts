@@ -49,6 +49,107 @@ export const ECOG: CodeOption[] = [
   { code: "4", label: "4 - Completely disabled" },
 ];
 
+export const PRIMARY_SITE: CodeOption[] = [
+  { code: "1", label: "Cervix" },
+  { code: "2", label: "Endometrium / uterine corpus" },
+  { code: "3", label: "Ovary" },
+  { code: "4", label: "Fallopian tube" },
+  { code: "5", label: "Primary peritoneal" },
+  { code: "6", label: "Vulva" },
+  { code: "7", label: "Vagina" },
+  { code: "8", label: "Gestational trophoblastic neoplasia" },
+  { code: "9", label: "Uterine sarcoma" },
+  { code: "10", label: "Other uterine" },
+  { code: "11", label: "Unknown primary" },
+  { code: "12", label: "Other" },
+];
+
+export const SEX_AT_BIRTH: CodeOption[] = [
+  { code: "1", label: "Female" },
+  { code: "2", label: "Male" },
+  { code: "3", label: "Intersex" },
+  { code: "9", label: "Unknown" },
+];
+
+export const RESIDENCE_TYPE: CodeOption[] = [
+  { code: "1", label: "Urban" },
+  { code: "2", label: "Rural" },
+  { code: "3", label: "Peri-urban" },
+  { code: "9", label: "Unknown" },
+];
+
+export const REGISTRATION_SITES: CodeOption[] = [
+  { code: "Parirenyatwa", label: "Parirenyatwa Group of Hospitals" },
+  { code: "Other", label: "Other facility" },
+];
+
+export const BASIS_DIAGNOSIS: CodeOption[] = [
+  { code: "1", label: "Clinical only" },
+  { code: "2", label: "Imaging" },
+  { code: "3", label: "Cytology" },
+  { code: "4", label: "Histology of metastasis" },
+  { code: "5", label: "Histology of primary" },
+  { code: "9", label: "Unknown" },
+];
+
+/** Map Module 3 cancer type codes onto tumour primary-site codes. */
+export function primarySiteFromCancerType(cancerType?: string | null): string | undefined {
+  const map: Record<string, string> = {
+    "1": "1",
+    "2": "3",
+    "3": "2",
+    "4": "6",
+    "5": "7",
+    "6": "8",
+    "7": "8",
+  };
+  return cancerType ? map[cancerType] : undefined;
+}
+
+export const MDT_STATUS: CodeOption[] = [
+  { code: "Not ready", label: "Not ready" },
+  { code: "Awaiting histology", label: "Awaiting histology" },
+  { code: "Awaiting imaging", label: "Awaiting imaging" },
+  { code: "Ready—not booked", label: "Ready — not booked" },
+  { code: "Booked", label: "Booked" },
+  { code: "Discussed", label: "Discussed" },
+  { code: "Recommendation documented", label: "Recommendation documented" },
+  { code: "Treatment initiated", label: "Treatment initiated" },
+  { code: "Deferred", label: "Deferred" },
+  { code: "Cancelled", label: "Cancelled" },
+];
+
+export const MDT_INTENT: CodeOption[] = [
+  { code: "Curative", label: "Curative" },
+  { code: "Palliative", label: "Palliative" },
+  { code: "Diagnostic", label: "Diagnostic" },
+  { code: "Surveillance", label: "Surveillance" },
+  { code: "Supportive", label: "Supportive" },
+];
+
+export const MDT_RECOMMENDATION: CodeOption[] = [
+  { code: "Surgery", label: "Surgery" },
+  { code: "Chemoradiation", label: "Chemoradiation" },
+  { code: "Radiotherapy", label: "Radiotherapy" },
+  { code: "Systemic therapy", label: "Systemic therapy" },
+  { code: "Neoadjuvant chemotherapy", label: "Neoadjuvant chemotherapy" },
+  { code: "Further investigation", label: "Further investigation" },
+  { code: "Surveillance", label: "Surveillance" },
+  { code: "Palliative/supportive care", label: "Palliative / supportive care" },
+  { code: "Other", label: "Other" },
+];
+
+export const FOLLOWUP_DISEASE_STATUS: CodeOption[] = [
+  { code: "1", label: "No evidence of disease" },
+  { code: "2", label: "Complete response" },
+  { code: "3", label: "Partial response" },
+  { code: "4", label: "Stable disease" },
+  { code: "5", label: "Persistent disease" },
+  { code: "6", label: "Progressive disease" },
+  { code: "7", label: "Recurrent disease" },
+  { code: "8", label: "Unknown" },
+];
+
 export const CANCER_TYPE: CodeOption[] = [
   { code: "1", label: "Cervix" },
   { code: "2", label: "Ovary" },
@@ -98,6 +199,41 @@ export const MDT_MEETING_TYPE: CodeOption[] = [
   { code: "3", label: "Post-operative / pathology review" },
   { code: "4", label: "Recurrence / progression" },
   { code: "5", label: "Other" },
+];
+
+export const YNU: CodeOption[] = [
+  { code: "0", label: "No" },
+  { code: "1", label: "Yes" },
+  { code: "9", label: "Unknown" },
+];
+
+export const MENSTRUAL_STATUS: CodeOption[] = [
+  { code: "1", label: "Premenopausal" },
+  { code: "2", label: "Perimenopausal" },
+  { code: "3", label: "Postmenopausal" },
+  { code: "4", label: "Surgical menopause" },
+  { code: "9", label: "Unknown" },
+];
+
+export const SMOKING: CodeOption[] = [
+  { code: "1", label: "Never" },
+  { code: "2", label: "Former" },
+  { code: "3", label: "Current" },
+  { code: "9", label: "Unknown" },
+];
+
+export const PATHWAY_SOURCE: CodeOption[] = [
+  { code: "1", label: "District hospital" },
+  { code: "2", label: "Provincial hospital" },
+  { code: "3", label: "Central / tertiary" },
+  { code: "4", label: "Private practitioner" },
+  { code: "5", label: "Private hospital" },
+  { code: "6", label: "Screening programme" },
+  { code: "7", label: "HIV / ART clinic" },
+  { code: "8", label: "Emergency department" },
+  { code: "9", label: "Self-referral" },
+  { code: "10", label: "Other" },
+  { code: "99", label: "Unknown" },
 ];
 
 export const REFERRAL_SOURCE: CodeOption[] = [

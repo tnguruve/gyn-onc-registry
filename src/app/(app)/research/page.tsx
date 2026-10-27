@@ -6,11 +6,12 @@ import { ResearchExportPanel } from "@/components/research/research-export-panel
 import { ResearchCohortFilters } from "@/components/research/research-cohort-filters";
 import { DelayHistogramChart } from "@/components/research/delay-histogram-chart";
 import { KaplanMeierChart } from "@/components/research/kaplan-meier-chart";
+import { ResearchQuestions } from "@/components/research/research-questions";
 
 export default async function ResearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ consent?: string; cancer?: string; province?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ consent?: string; cancer?: string; province?: string; figo?: string; hiv?: string; from?: string; to?: string }>;
 }) {
   await requirePermission("reports:read");
 
@@ -19,6 +20,8 @@ export default async function ResearchPage({
     consent: params.consent === "yes" || params.consent === "no" ? params.consent : "all",
     cancer: params.cancer,
     province: params.province,
+    figo: params.figo,
+    hiv: params.hiv,
     dateFrom: params.from,
     dateTo: params.to,
   };
@@ -40,6 +43,7 @@ export default async function ResearchPage({
     cohort,
     exportLogs,
     exportPreview,
+    researchQuestions,
   } = metrics;
 
   return (
@@ -99,6 +103,8 @@ export default async function ResearchPage({
         <KaplanMeierChart curve={overallSurvival} />
         <KaplanMeierChart curve={progressionFreeSurvival} />
       </div>
+
+      <ResearchQuestions analyses={researchQuestions} />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <ChartCard title="Registrations (12 mo)" subtitle={`${stats.registryTotal} total`}>
@@ -205,6 +211,8 @@ export default async function ResearchPage({
         rowEstimate={exportPreview.filtered}
         defaultCancer={filter.cancer}
         defaultProvince={filter.province}
+        defaultFigo={filter.figo}
+        defaultHiv={filter.hiv}
         defaultDateFrom={filter.dateFrom}
         defaultDateTo={filter.dateTo}
         consentOnlyDefault={filter.consent === "yes"}

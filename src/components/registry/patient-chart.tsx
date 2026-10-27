@@ -39,6 +39,9 @@ import {
   ECOG,
   EDUCATION_LEVEL,
   FIGO_STAGE,
+  REGISTRATION_SITES,
+  RESIDENCE_TYPE,
+  SEX_AT_BIRTH,
   GRADE,
   HISTOLOGY,
   HIV_STATUS,
@@ -46,8 +49,10 @@ import {
   MARGIN_STATUS,
   MDT_MEETING_TYPE,
   MOLECULAR_RESULT,
+  PATHWAY_SOURCE,
   PROVINCES,
   RECURRENCE_SITE,
+  YNU,
   REFERRAL_SOURCE,
   SURGICAL_APPROACH,
   labelFor,
@@ -79,6 +84,8 @@ export function PatientRegistryChart({
   patient,
   customModules,
   canWrite,
+  canEditDemographics,
+  canWriteResearch = canWrite,
   canDelete,
   savedModule,
   errorMessage,
@@ -87,6 +94,8 @@ export function PatientRegistryChart({
   patient: PatientRecord;
   customModules: CustomModuleForPatient[];
   canWrite: boolean;
+  canEditDemographics: boolean;
+  canWriteResearch?: boolean;
   canDelete: boolean;
   savedModule?: string | null;
   errorMessage?: string | null;
@@ -112,7 +121,7 @@ export function PatientRegistryChart({
   const autoBmi = calcBmi(patient.heightCm, patient.weightKg) ?? patient.bmi;
 
   const navModules = [
-    ...REGISTRY_MODULES,
+    ...REGISTRY_MODULES.filter((module) => module.id === "demographics" || module.id === "research"),
     ...customModules.map((m) => ({ id: customModuleAnchor(m.slug), label: m.name })),
   ];
 
@@ -146,8 +155,7 @@ export function PatientRegistryChart({
       </div>
 
       <SaveFeedback saved={savedModule} error={errorMessage} notice={notice} />
-
-      {!canWrite && (
+      {!canWrite && !canEditDemographics && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           You are in read-only mode. Sign in as a <strong>Clinician</strong> or <strong>Admin</strong> to enter and save data.
         </div>
@@ -192,15 +200,14 @@ export function PatientRegistryChart({
 
       <ModuleCard id="demographics" title="Module 1 — Patient demographics">
         <ModuleEditShell
-          canWrite={canWrite}
+          canWrite={canEditDemographics}
           hasData={Boolean(patient.hospitalNumber || patient.phone || patient.province)}
           view={
             <ReadonlyGrid items={[
               ["Phone", patient.phone ?? "—"],
               ["Province", labelFor(PROVINCES, patient.province)],
-              ["HIV", labelFor(HIV_STATUS, patient.hivStatus)],
-              ["ECOG", labelFor(ECOG, patient.ecog)],
-              ["BMI", patient.bmi?.toString() ?? "—"],
+              ["Country", patient.country ?? "—"],
+              ["Sex at birth", labelFor(SEX_AT_BIRTH, patient.sexAtBirth)],
             ]} />
           }
         >
@@ -209,6 +216,7 @@ export function PatientRegistryChart({
               <FormField><Label htmlFor="hospitalNumber">Hospital number</Label><Input id="hospitalNumber" name="hospitalNumber" defaultValue={patient.hospitalNumber ?? ""} /></FormField>
               <FormField><Label htmlFor="nationalId">National ID</Label><Input id="nationalId" name="nationalId" defaultValue={patient.nationalId ?? ""} /></FormField>
             </FormRow>
+            <FormField><Label htmlFor="address">Residential address</Label><Input id="address" name="address" defaultValue={patient.address ?? ""} /></FormField>
             <FormRow>
               <FormField><Label htmlFor="firstName">First name</Label><Input id="firstName" name="firstName" defaultValue={patient.firstName} required /></FormField>
               <FormField><Label htmlFor="surname">Surname</Label><Input id="surname" name="surname" defaultValue={patient.surname} required /></FormField>
@@ -225,6 +233,18 @@ export function PatientRegistryChart({
               <FormField><CodedSelect id="educationLevel" name="educationLevel" label="Education" options={EDUCATION_LEVEL} defaultValue={patient.educationLevel} /></FormField>
               <FormField><Label htmlFor="occupation">Occupation</Label><Input id="occupation" name="occupation" defaultValue={patient.occupation ?? ""} /></FormField>
             </FormRow>
+            <FormRow>
+              <FormField><CodedSelect id="sexAtBirth" name="sexAtBirth" label="Sex at birth" options={SEX_AT_BIRTH} defaultValue={patient.sexAtBirth} /></FormField>
+              <FormField><CodedSelect id="residenceType" name="residenceType" label="Residence" options={RESIDENCE_TYPE} defaultValue={patient.residenceType} /></FormField>
+            </FormRow>
+            <FormRow>
+              <FormField><Label htmlFor="country">Country</Label><Input id="country" name="country" defaultValue={patient.country ?? "Zimbabwe"} /></FormField>
+              <FormField><CodedSelect id="registrationSite" name="registrationSite" label="Registering facility" options={REGISTRATION_SITES} defaultValue={patient.registrationSite} /></FormField>
+            </FormRow>
+            <FormRow>
+              <FormField><Label htmlFor="registrationDate">Registration date</Label><Input id="registrationDate" name="registrationDate" type="date" defaultValue={toInputDate(patient.registrationDate)} /></FormField>
+              <FormField><Label htmlFor="phoneAlt">Alternative phone</Label><Input id="phoneAlt" name="phoneAlt" type="tel" defaultValue={patient.phoneAlt ?? ""} /></FormField>
+            </FormRow>
             <div className="border-t border-slate-100 pt-3">
               <p className="mb-3 text-sm font-medium text-slate-700">Contact details</p>
               <FormField>
@@ -233,6 +253,10 @@ export function PatientRegistryChart({
               </FormField>
             </div>
             <FormRow>
+              <FormField><Label htmlFor="nextOfKin">Next of kin</Label><Input id="nextOfKin" name="nextOfKin" defaultValue={patient.nextOfKin ?? ""} /></FormField>
+              <FormField><Label htmlFor="nokPhone">Next-of-kin phone</Label><Input id="nokPhone" name="nokPhone" type="tel" defaultValue={patient.nokPhone ?? ""} /></FormField>
+            </FormRow>
+            {false ? <><FormRow>
               <FormField><CodedSelect id="hivStatus" name="hivStatus" label="HIV status" options={HIV_STATUS} defaultValue={patient.hivStatus} /></FormField>
               <FormField><CodedSelect id="artStatus" name="artStatus" label="ART status" options={ART_STATUS} defaultValue={patient.artStatus} /></FormField>
             </FormRow>
@@ -259,15 +283,15 @@ export function PatientRegistryChart({
                   </label>
                 ))}
               </div>
-            </FormField>
+            </FormField></> : null}
             <Button type="submit" size="sm">Save demographics</Button>
           </form>
         </ModuleEditShell>
       </ModuleCard>
 
-      <ModuleCard id="referral" title="Module 2 — Referral & delays" description="Enables diagnostic delay research">
+      {false ? <><ModuleCard id="referral" title="Module 2 — Referral & delays" description="Enables diagnostic delay research">
         <ModuleEditShell
-          canWrite={canWrite}
+          canWrite={canWriteResearch}
           hasData={Boolean(patient.referral?.diagnosisDate || patient.referral?.symptomStartDate)}
           view={
             <ReadonlyGrid items={[
@@ -291,7 +315,27 @@ export function PatientRegistryChart({
               <FormField><Label htmlFor="diagnosisDate">Diagnosis date</Label><Input id="diagnosisDate" name="diagnosisDate" type="date" defaultValue={toInputDate(patient.referral?.diagnosisDate)} /></FormField>
               <FormField><Label htmlFor="treatmentStartDate">Treatment start date</Label><Input id="treatmentStartDate" name="treatmentStartDate" type="date" defaultValue={toInputDate(patient.referral?.treatmentStartDate)} /></FormField>
             </FormRow>
-            <FormField><CodedSelect id="referralSource" name="referralSource" label="Referral source" options={REFERRAL_SOURCE} defaultValue={patient.referral?.referralSource} /></FormField>
+            <FormField><CodedSelect id="referralSource" name="referralSource" label="Referral source (legacy)" options={REFERRAL_SOURCE} defaultValue={patient.referral?.referralSource} /></FormField>
+            <FormRow>
+              <FormField><Label htmlFor="referralReceived">Referral received</Label><Input id="referralReceived" name="referralReceived" type="date" defaultValue={toInputDate(patient.referral?.referralReceived)} /></FormField>
+              <FormField><Label htmlFor="firstContactDate">First contact</Label><Input id="firstContactDate" name="firstContactDate" type="date" defaultValue={toInputDate(patient.referral?.firstContactDate)} /></FormField>
+            </FormRow>
+            <FormRow>
+              <FormField><CodedSelect id="pathwaySource" name="pathwaySource" label="Care pathway source" options={PATHWAY_SOURCE} defaultValue={patient.referral?.pathwaySource} /></FormField>
+              <FormField><CodedSelect id="suspectedCa" name="suspectedCa" label="Suspected cancer" options={YNU} defaultValue={patient.referral?.suspectedCa} /></FormField>
+            </FormRow>
+            <FormRow>
+              <FormField><Label htmlFor="referralFacility">Referring facility</Label><Input id="referralFacility" name="referralFacility" defaultValue={patient.referral?.referralFacility ?? ""} /></FormField>
+              <FormField><Label htmlFor="referralLevel">Level of care</Label><Input id="referralLevel" name="referralLevel" defaultValue={patient.referral?.referralLevel ?? ""} /></FormField>
+            </FormRow>
+            <FormRow>
+              <FormField><Label htmlFor="referralReason">Referral reason</Label><Input id="referralReason" name="referralReason" defaultValue={patient.referral?.referralReason ?? ""} /></FormField>
+              <FormField><Label htmlFor="referralUrgency">Urgency</Label><Input id="referralUrgency" name="referralUrgency" defaultValue={patient.referral?.referralUrgency ?? ""} /></FormField>
+            </FormRow>
+            <FormRow>
+              <FormField><Label htmlFor="previousFacilities">Previous facilities (count)</Label><Input id="previousFacilities" name="previousFacilities" type="number" defaultValue={patient.referral?.previousFacilities ?? ""} /></FormField>
+              <FormField><Label htmlFor="referralNotes">Referral notes</Label><Input id="referralNotes" name="referralNotes" defaultValue={patient.referral?.referralNotes ?? ""} /></FormField>
+            </FormRow>
             <Button type="submit" size="sm">Save referral</Button>
           </form>
         </ModuleEditShell>
@@ -317,7 +361,10 @@ export function PatientRegistryChart({
               <FormField><CodedSelect id="grade" name="grade" label="Grade" options={GRADE} defaultValue={patient.diagnosis?.grade} /></FormField>
               <FormField><CodedSelect id="figoStage" name="figoStage" label="FIGO stage" options={FIGO_STAGE} defaultValue={patient.diagnosis?.figoStage} /></FormField>
             </FormRow>
-            <FormField><Label htmlFor="tnmStage">TNM stage</Label><Input id="tnmStage" name="tnmStage" defaultValue={patient.diagnosis?.tnmStage ?? ""} /></FormField>
+            <FormRow>
+              <FormField><Label htmlFor="figoVersion">FIGO version</Label><Input id="figoVersion" name="figoVersion" placeholder="e.g. 2018 or 2023" /></FormField>
+              <FormField><Label htmlFor="tnmStage">TNM stage</Label><Input id="tnmStage" name="tnmStage" defaultValue={patient.diagnosis?.tnmStage ?? ""} /></FormField>
+            </FormRow>
             <p className="text-xs text-slate-500">MDT discussions are recorded in the <a href="#mdt" className="font-medium text-teal-700 underline">MDT section</a> below.</p>
             <Button type="submit" size="sm">Save diagnosis</Button>
           </form>
@@ -458,7 +505,7 @@ export function PatientRegistryChart({
         description="Specimen findings, immunohistochemistry (IHC), serum tumour markers, and molecular testing"
       >
         <ModuleEditShell
-          canWrite={canWrite}
+          canWrite={canWriteResearch}
           hasData={Boolean(patient.histopathology?.pathologyDate || patient.histopathology?.nodesRemoved != null || patient.histopathology?.ca125)}
           view={
             <ReadonlyGrid items={[
@@ -641,6 +688,7 @@ export function PatientRegistryChart({
           <form action={addFollowUpAction.bind(null, pid)} className="space-y-3 border-t pt-3">
             <FormRow>
               <FormField><Label htmlFor="visitDate">Visit date *</Label><Input id="visitDate" name="visitDate" type="date" required /></FormField>
+              <FormField><Label htmlFor="nextAppointment">Next appointment</Label><Input id="nextAppointment" name="nextAppointment" type="date" /></FormField>
               <FormField><CodedSelect id="fEcog" name="ecog" label="ECOG" options={ECOG} /></FormField>
             </FormRow>
             <FormField><CodedSelect id="diseaseStatus" name="diseaseStatus" label="Disease status" options={DISEASE_STATUS} /></FormField>
@@ -696,7 +744,7 @@ export function PatientRegistryChart({
             <Button type="submit" size="sm">Save survival</Button>
           </form>
         </ModuleEditShell>
-      </ModuleCard>
+      </ModuleCard></> : null}
 
       <ModuleCard
         id="research"

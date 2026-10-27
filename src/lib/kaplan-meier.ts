@@ -44,6 +44,39 @@ function computeKaplanMeier(observations: SurvivalObservation[]): KmPoint[] {
   return points;
 }
 
+export function survivalAt(curve: KaplanMeierCurve, timeDays: number): number | null {
+  if (curve.insufficient || curve.points.length === 0) return null;
+  return curve.points
+    .filter((point) => point.timeDays <= timeDays)
+    .at(-1)?.survival ?? 1;
+}
+
+export function buildSurvivalCurve(
+  label: string,
+  observations: SurvivalObservation[],
+  minN = 3,
+): KaplanMeierCurve {
+  const valid = observations.filter((o) => o.timeDays >= 0);
+  const events = valid.filter((o) => o.event).length;
+  if (valid.length < minN) {
+    return {
+      label,
+      n: valid.length,
+      events,
+      points: [],
+      insufficient: true,
+      message: `Need at least ${minN} observations with follow-up.`,
+    };
+  }
+  return {
+    label,
+    n: valid.length,
+    events,
+    points: computeKaplanMeier(valid),
+    insufficient: false,
+  };
+}
+
 export function buildOverallSurvivalCurve(
   observations: SurvivalObservation[],
   minN = 3,

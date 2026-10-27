@@ -6,7 +6,7 @@ import { PrintReportButton } from "@/components/research/print-report-button";
 export default async function ResearchReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ consent?: string; cancer?: string; province?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ consent?: string; cancer?: string; province?: string; figo?: string; hiv?: string; from?: string; to?: string }>;
 }) {
   await requirePermission("reports:read");
 
@@ -15,11 +15,13 @@ export default async function ResearchReportPage({
     consent: params.consent === "yes" || params.consent === "no" ? params.consent : "all",
     cancer: params.cancer,
     province: params.province,
+    figo: params.figo,
+    hiv: params.hiv,
     dateFrom: params.from,
     dateTo: params.to,
   };
 
-  const { stats, diagnosisDistribution, reportSummary, syncedAt, missingness } =
+  const { stats, diagnosisDistribution, reportSummary, syncedAt, missingness, researchQuestions } =
     await buildResearchMetrics(filter);
 
   return (
@@ -50,6 +52,24 @@ export default async function ResearchReportPage({
             <Row label="Research-ready cases" value={String(stats.researchReadyCount)} />
             <Row label="Average data completeness" value={`${stats.avgCompleteness}%`} />
             <Row label="Exportable rows (current filters)" value={String(reportSummary.exportableRows)} />
+          </tbody>
+        </table>
+      </section>
+
+      <section className="mt-8 space-y-3">
+        <h2 className="text-lg font-semibold">Reproducible research results</h2>
+        <table className="w-full text-sm">
+          <tbody>
+            <Row label="RQ1 stage IIIC cervix treated" value={researchQuestions.rq1.map((r) => `${r.year}: ${r.count}`).join("; ") || "Insufficient data"} />
+            <Row label="RQ2 cervical HIV prevalence" value={researchQuestions.rq2.percent == null ? "Insufficient data" : `${researchQuestions.rq2.percent}% (${researchQuestions.rq2.positive}/${researchQuestions.rq2.known} known)`} />
+            <Row label="RQ3 median referral to first MDT" value={researchQuestions.rq3.medianDays == null ? "Insufficient data" : `${researchQuestions.rq3.medianDays} days (n=${researchQuestions.rq3.n})`} />
+            <Row label="RQ4 median pathology report to treatment" value={researchQuestions.rq4.medianDays == null ? "Insufficient data" : `${researchQuestions.rq4.medianDays} days (n=${researchQuestions.rq4.n})`} />
+            <Row label="RQ5 MDT implementation" value={researchQuestions.rq5.percent == null ? "Insufficient data" : `${researchQuestions.rq5.percent}% (${researchQuestions.rq5.implemented}/${researchQuestions.rq5.recommended})`} />
+            <Row label="RQ6 advanced ovarian groups" value={researchQuestions.rq6.map((r) => `${r.strategy}: n=${r.n}, deaths=${r.deaths}, recurrences=${r.recurrences}`).join("; ")} />
+            <Row label="RQ7 loss to follow-up" value={researchQuestions.rq7.percent == null ? "Insufficient data" : `${researchQuestions.rq7.percent}% (${researchQuestions.rq7.lost}/${researchQuestions.rq7.followed})`} />
+            <Row label="RQ8 radical hysterectomy complications" value={researchQuestions.rq8.percent == null ? "Insufficient data" : `${researchQuestions.rq8.percent}% (${researchQuestions.rq8.complications}/${researchQuestions.rq8.procedures})`} />
+            <Row label="RQ9 five-year OS by FIGO" value={researchQuestions.rq9.map((r) => `FIGO ${r.stage}: ${r.fiveYearOsPct == null ? "insufficient" : `${r.fiveYearOsPct}%`}`).join("; ") || "Insufficient data"} />
+            <Row label="RQ10 endometrial histology" value={researchQuestions.rq10.map((r) => `${r.histology}: ${r.count} (${r.percent ?? 0}%)`).join("; ") || "Insufficient data"} />
           </tbody>
         </table>
       </section>

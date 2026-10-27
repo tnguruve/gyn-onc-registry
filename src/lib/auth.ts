@@ -56,6 +56,13 @@ export async function destroySession() {
 
 export function parseUserRole(role: string): UserRole | null {
   const normalized = role.trim().toUpperCase().replace(/[\s-]+/g, "_");
+  const aliases: Record<string, UserRole> = {
+    CONSULTANT: "CLINICIAN",
+    REGISTRAR: "CLINICIAN",
+    MDTCOORDINATOR: "MDT_COORDINATOR",
+    DATAMANAGER: "DATA_MANAGER",
+  };
+  if (aliases[normalized]) return aliases[normalized];
   return USER_ROLES.includes(normalized as UserRole) ? (normalized as UserRole) : null;
 }
 

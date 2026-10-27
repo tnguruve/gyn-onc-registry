@@ -26,7 +26,18 @@ import { z } from "zod";
 import { computeWorkflowStatus } from "@/lib/patient-workflow";
 import { buildInviteUrl, generateInviteToken, inviteExpiry } from "@/lib/invites";
 import { MDT_INITIAL_TYPE } from "@/lib/mdt";
-import { slugifyModuleName, type CustomFieldDraft, type CustomModuleDraft } from "@/lib/custom-modules";
+import { slugifyModuleName, type CustomModuleDraft } from "@/lib/custom-modules";
+import { nextTumourCode, refreshTumourReadiness } from "@/lib/tumour-readiness";
+import { hasPermission } from "@/lib/permissions";
+import {
+  syncDiagnosisToTumour,
+  syncFirstImaging,
+  syncFirstMdt,
+  syncFirstPathology,
+  syncFirstRadiotherapy,
+  syncFirstSurgery,
+  syncFirstSystemic,
+} from "@/lib/legacy-tumour-sync";
 
 function redirectWithError(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
@@ -97,32 +108,47 @@ async function refreshRegistryViews(patientId?: string) {
   revalidatePath("/patients");
 }
 
-function demographicsFromForm(formData: FormData, dob: Date) {
+function demographicsFromForm(formData: FormData, dob: Date, includeClinical = false) {
   const heightCm = parseFloatField(formData.get("heightCm"));
   const weightKg = parseFloatField(formData.get("weightKg"));
   const charlson = formData.getAll("charlson").map(String);
+  const nationalId = normalizeNationalId(formData.get("nationalId"));
   return {
     hospitalNumber: String(formData.get("hospitalNumber") ?? "").trim() || undefined,
-    nationalId: normalizeNationalId(formData.get("nationalId")),
+    nationalId,
+    nationalIdNormalized: nationalId,
     firstName: String(formData.get("firstName") ?? "").trim(),
     surname: String(formData.get("surname") ?? "").trim(),
     dateOfBirth: dob,
+    address: String(formData.get("address") ?? "").trim() || undefined,
     province: codeFromForm(formData.get("province")),
     district: String(formData.get("district") ?? "").trim() || undefined,
     maritalStatus: codeFromForm(formData.get("maritalStatus")),
     educationLevel: codeFromForm(formData.get("educationLevel")),
     occupation: String(formData.get("occupation") ?? "").trim() || undefined,
     phone: String(formData.get("phone") ?? "").trim() || undefined,
-    hivStatus: codeFromForm(formData.get("hivStatus")),
-    artStatus: codeFromForm(formData.get("artStatus")),
-    artRegimen: String(formData.get("artRegimen") ?? "").trim() || undefined,
-    cd4Count: parseIntField(formData.get("cd4Count")),
-    viralLoad: String(formData.get("viralLoad") ?? "").trim() || undefined,
-    ecog: codeFromForm(formData.get("ecog")),
-    heightCm,
-    weightKg,
-    bmi: calcBmi(heightCm, weightKg) ?? parseFloatField(formData.get("bmi")),
-    charlsonConditions: charlson.length ? serializeCharlsonConditions(charlson) : undefined,
+    sexAtBirth: codeFromForm(formData.get("sexAtBirth")),
+    phoneAlt: String(formData.get("phoneAlt") ?? "").trim() || undefined,
+    residenceType: codeFromForm(formData.get("residenceType")),
+    nextOfKin: String(formData.get("nextOfKin") ?? "").trim() || undefined,
+    nokPhone: String(formData.get("nokPhone") ?? "").trim() || undefined,
+    registrationDate: parseDate(formData.get("registrationDate")) ?? new Date(),
+    registrationSite: String(formData.get("registrationSite") ?? "").trim() || "Parirenyatwa",
+    country: String(formData.get("country") ?? "").trim() || "Zimbabwe",
+    ...(includeClinical
+      ? {
+          hivStatus: codeFromForm(formData.get("hivStatus")),
+          artStatus: codeFromForm(formData.get("artStatus")),
+          artRegimen: String(formData.get("artRegimen") ?? "").trim() || undefined,
+          cd4Count: parseIntField(formData.get("cd4Count")),
+          viralLoad: String(formData.get("viralLoad") ?? "").trim() || undefined,
+          ecog: codeFromForm(formData.get("ecog")),
+          heightCm,
+          weightKg,
+          bmi: calcBmi(heightCm, weightKg) ?? parseFloatField(formData.get("bmi")),
+          charlsonConditions: charlson.length ? serializeCharlsonConditions(charlson) : undefined,
+        }
+      : {}),
   };
 }
 
@@ -168,7 +194,9 @@ export async function createPatientAction(formData: FormData) {
   const firstName = String(formData.get("firstName") ?? "").trim();
   const surname = String(formData.get("surname") ?? "").trim();
   const dob = parseDate(formData.get("dateOfBirth"));
+  const hospitalNumber = String(formData.get("hospitalNumber") ?? "").trim();
   if (!firstName || !surname || !dob) redirectWithError("/patients/new", "First name, surname and date of birth are required");
+  if (!hospitalNumber) redirectWithError("/patients/new", "Hospital number is required");
 
   const nationalId = normalizeNationalId(formData.get("nationalId"));
   if (nationalId) {
@@ -210,7 +238,11 @@ export async function updateDemographicsAction(patientId: string, formData: Form
   const dob = parseDate(formData.get("dateOfBirth"));
   if (!dob) redirectWithError(patientPath(patientId), "Date of birth is required");
 
-  const data = demographicsFromForm(formData, dob);
+  const data = demographicsFromForm(
+    formData,
+    dob,
+    hasPermission(session.role, "clinical:write"),
+  );
   if (data.nationalId) {
     const existing = await findPatientByNationalId(data.nationalId, patientId);
     if (existing) {
@@ -241,6 +273,16 @@ export async function saveReferralAction(patientId: string, formData: FormData) 
     diagnosisDate: parseDate(formData.get("diagnosisDate")),
     treatmentStartDate: parseDate(formData.get("treatmentStartDate")),
     referralSource: codeFromForm(formData.get("referralSource")),
+    referralReceived: parseDate(formData.get("referralReceived")),
+    pathwaySource: codeFromForm(formData.get("pathwaySource")),
+    referralFacility: String(formData.get("referralFacility") ?? "").trim() || undefined,
+    referralLevel: String(formData.get("referralLevel") ?? "").trim() || undefined,
+    referralReason: String(formData.get("referralReason") ?? "").trim() || undefined,
+    suspectedCa: codeFromForm(formData.get("suspectedCa")),
+    referralUrgency: String(formData.get("referralUrgency") ?? "").trim() || undefined,
+    firstContactDate: parseDate(formData.get("firstContactDate")),
+    previousFacilities: parseIntField(formData.get("previousFacilities")),
+    referralNotes: String(formData.get("referralNotes") ?? "").trim() || undefined,
   };
   await prisma.referral.upsert({ where: { patientId }, create: { patientId, ...data }, update: data });
   await logAudit({ userId: session.id, userEmail: session.email, action: "UPDATE", entityType: "Referral", entityId: patientId });
@@ -258,7 +300,9 @@ export async function saveDiagnosisAction(patientId: string, formData: FormData)
     figoStage: codeFromForm(formData.get("figoStage")),
     tnmStage: String(formData.get("tnmStage") ?? "").trim() || undefined,
   };
+  const figoVersion = String(formData.get("figoVersion") ?? "").trim() || undefined;
   await prisma.diagnosis.upsert({ where: { patientId }, create: { patientId, ...data }, update: data });
+  await syncDiagnosisToTumour(patientId, { ...data, figoVersion });
   await logAudit({ userId: session.id, userEmail: session.email, action: "UPDATE", entityType: "Diagnosis", entityId: patientId });
   await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
@@ -273,14 +317,16 @@ export async function addMdtMeetingAction(patientId: string, formData: FormData)
   const meetingType = codeFromForm(formData.get("meetingType"));
   if (!meetingType) redirectWithError(patientPath(patientId), "MDT type is required");
 
+  const summary = String(formData.get("summary") ?? "").trim() || undefined;
   await prisma.mdtMeeting.create({
     data: {
       patientId,
       meetingDate,
       meetingType,
-      summary: String(formData.get("summary") ?? "").trim() || undefined,
+      summary,
     },
   });
+  await syncFirstMdt(patientId, meetingDate, summary);
 
   if (meetingType === MDT_INITIAL_TYPE) {
     await prisma.diagnosis.upsert({
@@ -335,6 +381,7 @@ export async function saveImagingAction(patientId: string, formData: FormData) {
     pciScore: parseIntField(formData.get("pciScore")),
   };
   await prisma.imaging.upsert({ where: { patientId }, create: { patientId, ...data }, update: data });
+  await syncFirstImaging(patientId, data);
   await logAudit({ userId: session.id, userEmail: session.email, action: "UPDATE", entityType: "Imaging", entityId: patientId });
   await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
@@ -345,13 +392,15 @@ export async function addSurgeryAction(patientId: string, formData: FormData) {
   const session = await requirePermission("clinical:write");
   const surgeryDate = parseDate(formData.get("surgeryDate"));
   if (!surgeryDate) redirectWithError(patientPath(patientId), "Surgery date is required");
+  const procedure = String(formData.get("procedure") ?? "").trim() || undefined;
+  const residualDisease = String(formData.get("residualDisease") ?? "").trim() || undefined;
   await prisma.surgery.create({
     data: {
       patientId,
       surgeryDate,
       surgeon: String(formData.get("surgeon") ?? "").trim() || undefined,
       assistant: String(formData.get("assistant") ?? "").trim() || undefined,
-      procedure: String(formData.get("procedure") ?? "").trim() || undefined,
+      procedure,
       approach: codeFromForm(formData.get("approach")),
       operativeTimeMinutes: parseIntField(formData.get("operativeTimeMinutes")),
       bloodLossMl: parseIntField(formData.get("bloodLossMl")),
@@ -362,10 +411,11 @@ export async function addSurgeryAction(patientId: string, formData: FormData) {
       stoma: boolFromForm(formData.get("stoma")),
       icuAdmission: boolFromForm(formData.get("icuAdmission")),
       intraoperativeComplication: String(formData.get("intraoperativeComplication") ?? "").trim() || undefined,
-      residualDisease: String(formData.get("residualDisease") ?? "").trim() || undefined,
+      residualDisease,
       ccScore: codeFromForm(formData.get("ccScore")),
     },
   });
+  await syncFirstSurgery(patientId, { surgeryDate, procedure, residualDisease });
   await logAudit({ userId: session.id, userEmail: session.email, action: "CREATE", entityType: "Surgery", entityId: patientId });
   await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
@@ -409,6 +459,14 @@ export async function saveHistopathologyAction(patientId: string, formData: Form
     ihcNotes: String(formData.get("ihcNotes") ?? "").trim() || undefined,
   };
   await prisma.histopathology.upsert({ where: { patientId }, create: { patientId, ...data }, update: data });
+  await syncFirstPathology(patientId, {
+    pathologyDate: data.pathologyDate,
+    histology: data.histology,
+    grade: data.grade,
+    lvsi: data.lvsi,
+    nodesRemoved: data.nodesRemoved,
+    positiveNodes: data.positiveNodes,
+  });
   await logAudit({ userId: session.id, userEmail: session.email, action: "UPDATE", entityType: "Histopathology", entityId: patientId });
   await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
@@ -417,11 +475,13 @@ export async function saveHistopathologyAction(patientId: string, formData: Form
 
 export async function addChemotherapyAction(patientId: string, formData: FormData) {
   const session = await requirePermission("clinical:write");
+  const chemoStartDate = parseDate(formData.get("chemoStartDate"));
+  const regimen = codeFromForm(formData.get("regimen"));
   await prisma.chemotherapy.create({
     data: {
       patientId,
-      chemoStartDate: parseDate(formData.get("chemoStartDate")),
-      regimen: codeFromForm(formData.get("regimen")),
+      chemoStartDate,
+      regimen,
       cyclesPlanned: parseIntField(formData.get("cyclesPlanned")),
       cyclesReceived: parseIntField(formData.get("cyclesReceived")),
       doseReduction: boolFromForm(formData.get("doseReduction")),
@@ -429,6 +489,7 @@ export async function addChemotherapyAction(patientId: string, formData: FormDat
       stoppedEarly: boolFromForm(formData.get("stoppedEarly")),
     },
   });
+  await syncFirstSystemic(patientId, { chemoStartDate, regimen });
   await logAudit({ userId: session.id, userEmail: session.email, action: "CREATE", entityType: "Chemotherapy", entityId: patientId });
   await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
@@ -448,6 +509,7 @@ export async function saveRadiotherapyAction(patientId: string, formData: FormDa
     interrupted: boolFromForm(formData.get("interrupted")),
   };
   await prisma.radiotherapy.upsert({ where: { patientId }, create: { patientId, ...data }, update: data });
+  await syncFirstRadiotherapy(patientId, data);
   await logAudit({ userId: session.id, userEmail: session.email, action: "UPDATE", entityType: "Radiotherapy", entityId: patientId });
   await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
@@ -477,10 +539,10 @@ export async function addComplicationAction(patientId: string, formData: FormDat
 
 export async function addFollowUpAction(patientId: string, formData: FormData) {
   const session = await requirePermission("clinical:write");
+  const followUpId = String(formData.get("followUpId") ?? "").trim();
   const visitDate = parseDate(formData.get("visitDate"));
   if (!visitDate) redirectWithError(patientPath(patientId), "Follow-up date is required");
-  await prisma.followUpVisit.create({
-    data: {
+  const data = {
       patientId,
       visitDate,
       ecog: codeFromForm(formData.get("ecog")),
@@ -488,9 +550,30 @@ export async function addFollowUpAction(patientId: string, formData: FormData) {
       recurrence: boolFromForm(formData.get("recurrence")),
       symptoms: String(formData.get("symptoms") ?? "").trim() || undefined,
       treatmentGiven: String(formData.get("treatmentGiven") ?? "").trim() || undefined,
-    },
-  });
-  await logAudit({ userId: session.id, userEmail: session.email, action: "CREATE", entityType: "FollowUp", entityId: patientId });
+      nextAppointment: parseDate(formData.get("nextAppointment")),
+      examFindings: String(formData.get("examFindings") ?? "").trim() || undefined,
+      imagingDone: boolFromForm(formData.get("imagingDone")),
+      tumourMarkers: String(formData.get("tumourMarkers") ?? "").trim() || undefined,
+      lateToxicity: String(formData.get("lateToxicity") ?? "").trim() || undefined,
+      recurrenceSuspected: boolFromForm(formData.get("recurrenceSuspected")),
+    };
+  if (followUpId) {
+    const result = await prisma.followUpVisit.updateMany({ where: { id: followUpId, patientId }, data });
+    if (!result.count) redirectWithError(patientPath(patientId), "Follow-up visit not found");
+  } else {
+    await prisma.followUpVisit.create({ data });
+  }
+  await logAudit({ userId: session.id, userEmail: session.email, action: followUpId ? "UPDATE" : "CREATE", entityType: "FollowUp", entityId: followUpId || patientId });
+  await refreshRegistryViews(patientId);
+  revalidatePath(patientPath(patientId));
+  redirect(`${patientPath(patientId)}#followup`);
+}
+
+export async function deleteFollowUpAction(patientId: string, followUpId: string) {
+  const session = await requirePermission("clinical:write");
+  const result = await prisma.followUpVisit.deleteMany({ where: { id: followUpId, patientId } });
+  if (!result.count) redirectWithError(patientPath(patientId), "Follow-up visit not found");
+  await logAudit({ userId: session.id, userEmail: session.email, action: "DELETE", entityType: "FollowUp", entityId: followUpId });
   await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
   redirect(`${patientPath(patientId)}#followup`);
@@ -696,7 +779,7 @@ export async function upsertCustomModuleAction(formData: FormData) {
     active: true,
   };
 
-  const module = payload.id
+  const savedModule = payload.id
     ? await prisma.customModule.update({ where: { id: payload.id }, data: moduleData })
     : await prisma.customModule.create({
         data: {
@@ -705,10 +788,10 @@ export async function upsertCustomModuleAction(formData: FormData) {
         },
       });
 
-  await prisma.customModuleField.deleteMany({ where: { moduleId: module.id } });
+  await prisma.customModuleField.deleteMany({ where: { moduleId: savedModule.id } });
   await prisma.customModuleField.createMany({
     data: payload.fields.map((field, index) => ({
-      moduleId: module.id,
+      moduleId: savedModule.id,
       label: field.label.trim(),
       fieldType: field.fieldType,
       required: field.required,
@@ -722,7 +805,7 @@ export async function upsertCustomModuleAction(formData: FormData) {
     userEmail: session.email,
     action: payload.id ? "UPDATE" : "CREATE",
     entityType: "CustomModule",
-    entityId: module.id,
+    entityId: savedModule.id,
     details: name,
   });
 
@@ -789,4 +872,490 @@ export async function savePatientCustomModuleAction(patientId: string, moduleId:
   await refreshRegistryViews(patientId);
   revalidatePath(patientPath(patientId));
   redirect(`${patientPath(patientId)}?saved=custom-${mod.slug}#custom-${mod.slug}`);
+}
+
+export async function createTumourAction(patientId: string, formData: FormData) {
+  const session = await requirePermission("clinical:write");
+  const site = codeFromForm(formData.get("site"));
+  if (!site) redirectWithError(patientPath(patientId), "Primary site is required");
+  const patient = await prisma.patient.findUnique({ where: { id: patientId } });
+  if (!patient) redirectWithError("/patients", "Patient not found");
+  const tumourCode = await nextTumourCode(patientId, patient.registryNumber);
+  const sequencePrimary = (await prisma.tumour.count({ where: { patientId } })) + 1;
+  const tumour = await prisma.tumour.create({
+    data: {
+      patientId,
+      tumourCode,
+      sequencePrimary,
+      site,
+      histology: String(formData.get("histology") ?? "").trim() || undefined,
+      incidenceDate: parseDate(formData.get("incidenceDate")),
+      diagnosisDate: parseDate(formData.get("diagnosisDate")),
+      hivStatus: codeFromForm(formData.get("hivStatus")) ?? patient.hivStatus ?? undefined,
+      laterality: String(formData.get("laterality") ?? "").trim() || undefined,
+      icdoTopography: String(formData.get("icdoTopography") ?? "").trim() || undefined,
+      icdoMorphology: String(formData.get("icdoMorphology") ?? "").trim() || undefined,
+      icdoBehaviour: String(formData.get("icdoBehaviour") ?? "").trim() || undefined,
+      tumourGrade: String(formData.get("tumourGrade") ?? "").trim() || undefined,
+      basisDiagnosis: String(formData.get("basisDiagnosis") ?? "").trim() || undefined,
+      figoVersion: String(formData.get("figoVersion") ?? "").trim() || undefined,
+      figoStage: String(formData.get("figoStage") ?? "").trim() || undefined,
+    },
+  });
+  await refreshTumourReadiness(tumour.id);
+  await logAudit({ userId: session.id, userEmail: session.email, action: "CREATE", entityType: "Tumour", entityId: tumour.id, details: tumourCode });
+  await refreshRegistryViews(patientId);
+  revalidatePath(patientPath(patientId));
+  redirect(`${patientPath(patientId)}#tumour-${tumour.id}`);
+}
+
+export async function updateTumourAction(patientId: string, tumourId: string, formData: FormData) {
+  const session = await requirePermission("clinical:write");
+  const result = await prisma.tumour.updateMany({
+    where: { id: tumourId, patientId },
+    data: {
+      site: codeFromForm(formData.get("site")),
+      laterality: String(formData.get("laterality") ?? "").trim() || undefined,
+      histology: String(formData.get("histology") ?? "").trim() || undefined,
+      icdoTopography: String(formData.get("icdoTopography") ?? "").trim() || undefined,
+      icdoMorphology: String(formData.get("icdoMorphology") ?? "").trim() || undefined,
+      icdoBehaviour: String(formData.get("icdoBehaviour") ?? "").trim() || undefined,
+      tumourGrade: String(formData.get("tumourGrade") ?? "").trim() || undefined,
+      basisDiagnosis: String(formData.get("basisDiagnosis") ?? "").trim() || undefined,
+      incidenceDate: parseDate(formData.get("incidenceDate")),
+      diagnosisDate: parseDate(formData.get("diagnosisDate")),
+      figoVersion: String(formData.get("figoVersion") ?? "").trim() || undefined,
+      figoStage: String(formData.get("figoStage") ?? "").trim() || undefined,
+      hivStatus: codeFromForm(formData.get("hivStatus")),
+    },
+  });
+  if (!result.count) redirectWithError(patientPath(patientId), "Tumour not found for this patient");
+  await logAudit({ userId: session.id, userEmail: session.email, action: "UPDATE", entityType: "Tumour", entityId: tumourId });
+  await refreshTumourReadiness(tumourId);
+  revalidatePath(patientPath(patientId));
+  redirect(`${patientPath(patientId)}#tumour-${tumourId}`);
+}
+
+export async function saveTumourEventAction(patientId: string, tumourId: string, formData: FormData) {
+  const session = await requirePermission("clinical:write");
+  const tumour = await prisma.tumour.findFirst({
+    where: { id: tumourId, patientId },
+    select: { id: true },
+  });
+  if (!tumour) redirectWithError(patientPath(patientId), "Tumour not found for this patient");
+  const type = String(formData.get("type") ?? "");
+  const eventId = String(formData.get("eventId") ?? "").trim();
+  const check = (name: string) => formData.get(name) === "on" || formData.get(name) === "true";
+
+  if (type === "assessment") {
+    const data = {
+        tumourId,
+        assessmentDate: parseDate(formData.get("assessmentDate")) ?? new Date(),
+        presentingComplaint: String(formData.get("presentingComplaint") ?? "").trim() || undefined,
+        bleeding: String(formData.get("bleeding") ?? "").trim() || undefined,
+        pain: String(formData.get("pain") ?? "").trim() || undefined,
+        discharge: String(formData.get("discharge") ?? "").trim() || undefined,
+        weightLoss: check("weightLoss"),
+        ecog: String(formData.get("ecog") ?? "").trim() || undefined,
+        tumourSizeCm: parseFloatField(formData.get("tumourSizeCm")),
+        vaginalInvolvement: String(formData.get("vaginalInvolvement") ?? "").trim() || undefined,
+        parametriumLeft: String(formData.get("parametriumLeft") ?? "").trim() || undefined,
+        parametriumRight: String(formData.get("parametriumRight") ?? "").trim() || undefined,
+        pelvicWall: check("pelvicWall"),
+        bladderInvasion: check("bladderInvasion"),
+        rectalInvasion: check("rectalInvasion"),
+        notes: String(formData.get("notes") ?? "").trim() || undefined,
+        examiner: String(formData.get("examiner") ?? "").trim() || undefined,
+        heightCm: parseFloatField(formData.get("heightCm")),
+        weightKg: parseFloatField(formData.get("weightKg")),
+        pallor: check("pallor"),
+        jaundice: check("jaundice"),
+        cachexia: check("cachexia"),
+        oedema: check("oedema"),
+        ascites: check("ascites"),
+        hepatomegaly: check("hepatomegaly"),
+        contactBleeding: check("contactBleeding"),
+        supraclavicularNodes: check("supraclavicularNodes"),
+        inguinalNodes: check("inguinalNodes"),
+        abdominalMass: check("abdominalMass"),
+        abdominalMassSizeCm: parseFloatField(formData.get("abdominalMassSizeCm")),
+        vulvalLesion: check("vulvalLesion"),
+        vulvalSite: String(formData.get("vulvalSite") ?? "").trim() || undefined,
+        vulvalSizeMm: parseFloatField(formData.get("vulvalSizeMm")),
+        midlineInvolvement: check("midlineInvolvement"),
+        cervixVisible: String(formData.get("cervixVisible") ?? "").trim() || undefined,
+        cervicalLesion: check("cervicalLesion"),
+        cervicalAppearance: String(formData.get("cervicalAppearance") ?? "").trim() || undefined,
+        uterineSize: String(formData.get("uterineSize") ?? "").trim() || undefined,
+        uterineMobility: String(formData.get("uterineMobility") ?? "").trim() || undefined,
+        adnexalMass: check("adnexalMass"),
+        pelvicMassSizeCm: parseFloatField(formData.get("pelvicMassSizeCm")),
+        bmi: calcBmi(parseFloatField(formData.get("heightCm")), parseFloatField(formData.get("weightKg"))),
+      };
+    if (eventId) await prisma.clinicalAssessment.updateMany({ where: { id: eventId, tumourId }, data });
+    else await prisma.clinicalAssessment.create({ data });
+  } else if (type === "pathology") {
+    const data = {
+        tumourId,
+        specimenDate: parseDate(formData.get("specimenDate")),
+        reportDate: parseDate(formData.get("reportDate")),
+        specimenType: String(formData.get("specimenType") ?? "").trim() || undefined,
+        histology: String(formData.get("histology") ?? "").trim() || undefined,
+        grade: String(formData.get("grade") ?? "").trim() || undefined,
+        lvsi: String(formData.get("lvsi") ?? "").trim() || undefined,
+        nodesExamined: parseIntField(formData.get("nodesExamined")),
+        nodesPositive: parseIntField(formData.get("nodesPositive")),
+        icdoMorphology: String(formData.get("icdoMorphology") ?? "").trim() || undefined,
+        tumourSize: String(formData.get("tumourSize") ?? "").trim() || undefined,
+        depthInvasion: String(formData.get("depthInvasion") ?? "").trim() || undefined,
+        perineural: String(formData.get("perineural") ?? "").trim() || undefined,
+        marginStatus: String(formData.get("marginStatus") ?? "").trim() || undefined,
+        closestMarginMm: parseFloatField(formData.get("closestMarginMm")),
+        extracapsular: String(formData.get("extracapsular") ?? "").trim() || undefined,
+        p16: String(formData.get("p16") ?? "").trim() || undefined,
+        p53: String(formData.get("p53") ?? "").trim() || undefined,
+        er: String(formData.get("er") ?? "").trim() || undefined,
+        pr: String(formData.get("pr") ?? "").trim() || undefined,
+        her2: String(formData.get("her2") ?? "").trim() || undefined,
+        mmr: String(formData.get("mmr") ?? "").trim() || undefined,
+        mlh1: String(formData.get("mlh1") ?? "").trim() || undefined,
+        msh2: String(formData.get("msh2") ?? "").trim() || undefined,
+        msh6: String(formData.get("msh6") ?? "").trim() || undefined,
+        pms2: String(formData.get("pms2") ?? "").trim() || undefined,
+        msi: String(formData.get("msi") ?? "").trim() || undefined,
+        pole: String(formData.get("pole") ?? "").trim() || undefined,
+        hpvAssociation: String(formData.get("hpvAssociation") ?? "").trim() || undefined,
+        brca: String(formData.get("brca") ?? "").trim() || undefined,
+        hrd: String(formData.get("hrd") ?? "").trim() || undefined,
+        ki67: String(formData.get("ki67") ?? "").trim() || undefined,
+        molecularNotes: String(formData.get("molecularNotes") ?? "").trim() || undefined,
+        laboratory: String(formData.get("laboratory") ?? "").trim() || undefined,
+        pathNumber: String(formData.get("pathNumber") ?? "").trim() || undefined,
+        anatomicalSite: String(formData.get("anatomicalSite") ?? "").trim() || undefined,
+        reportText: String(formData.get("reportText") ?? "").trim() || undefined,
+      };
+    if (eventId) await prisma.tumourPathology.updateMany({ where: { id: eventId, tumourId }, data });
+    else await prisma.tumourPathology.create({ data });
+  } else if (type === "imaging") {
+    const data = {
+        tumourId,
+        imagingDate: parseDate(formData.get("imagingDate")),
+        modality: String(formData.get("modality") ?? "").trim() || undefined,
+        facility: String(formData.get("facility") ?? "").trim() || "Unknown",
+        impression: String(formData.get("impression") ?? "").trim() || undefined,
+        pelvicNodes: check("pelvicNodes"),
+        paraaorticNodes: check("paraaorticNodes"),
+        distantMetastasis: check("distantMetastasis"),
+        indication: String(formData.get("indication") ?? "").trim() || undefined,
+        tumourSeen: check("tumourSeen"),
+        tumourSize: String(formData.get("tumourSize") ?? "").trim() || undefined,
+        ascites: check("ascites"),
+        liverMets: check("liverMets"),
+        lungMets: check("lungMets"),
+        boneMets: check("boneMets"),
+        localExtension: String(formData.get("localExtension") ?? "").trim() || undefined,
+        inguinalNodes: check("inguinalNodes"),
+        peritonealDisease: check("peritonealDisease"),
+        omentalDisease: check("omentalDisease"),
+        otherMetastases: String(formData.get("otherMetastases") ?? "").trim() || undefined,
+        reportUploaded: check("reportUploaded"),
+        reportText: String(formData.get("reportText") ?? "").trim() || undefined,
+      };
+    if (eventId) await prisma.tumourImaging.updateMany({ where: { id: eventId, tumourId }, data });
+    else await prisma.tumourImaging.create({ data });
+  } else if (type === "staging") {
+    const data = {
+        tumourId,
+        stagingDate: parseDate(formData.get("stagingDate")) ?? new Date(),
+        system: String(formData.get("system") ?? "FIGO").trim() || "FIGO",
+        version: String(formData.get("version") ?? "").trim() || undefined,
+        stage: String(formData.get("stage") ?? "").trim() || undefined,
+        substage: String(formData.get("substage") ?? "").trim() || undefined,
+        basis: String(formData.get("basis") ?? "").trim() || undefined,
+        clinicalStage: String(formData.get("clinicalStage") ?? "").trim() || undefined,
+        pathologicalStage: String(formData.get("pathologicalStage") ?? "").trim() || undefined,
+        finalStage: String(formData.get("finalStage") ?? "").trim() || undefined,
+        tumourSizeCm: parseFloatField(formData.get("tumourSizeCm")),
+        vaginalInvolvement: String(formData.get("vaginalInvolvement") ?? "").trim() || undefined,
+        parametrium: check("parametrium"),
+        pelvicWall: check("pelvicWall"),
+        hydronephrosis: check("hydronephrosis"),
+        bladderInvasion: check("bladderInvasion"),
+        rectalInvasion: check("rectalInvasion"),
+        pelvicNodes: check("pelvicNodes"),
+        paraaorticNodes: check("paraaorticNodes"),
+        distantMetastasis: check("distantMetastasis"),
+        parametriumLeft: String(formData.get("parametriumLeft") ?? "").trim() || undefined,
+        parametriumRight: String(formData.get("parametriumRight") ?? "").trim() || undefined,
+      };
+    if (eventId) await prisma.tumourStaging.updateMany({ where: { id: eventId, tumourId }, data });
+    else await prisma.tumourStaging.create({ data });
+  } else if (type === "mdt") {
+    const implementedRaw = String(formData.get("implemented") ?? "");
+    const data = {
+        tumourId,
+        requestDate: parseDate(formData.get("requestDate")),
+        meetingDate: parseDate(formData.get("meetingDate")),
+        status: String(formData.get("status") ?? "").trim() || undefined,
+        intent: String(formData.get("intent") ?? "").trim() || undefined,
+        recommendation: String(formData.get("recommendation") ?? "").trim() || undefined,
+        implemented: implementedRaw === "true" ? true : implementedRaw === "false" ? false : undefined,
+        implementationDate: parseDate(formData.get("implementationDate")),
+        reasonNotImplemented: String(formData.get("reasonNotImplemented") ?? "").trim() || undefined,
+        indication: String(formData.get("indication") ?? "").trim() || undefined,
+        presentingClinician: String(formData.get("presentingClinician") ?? "").trim() || undefined,
+        question: String(formData.get("question") ?? "").trim() || undefined,
+        stageAtMdt: String(formData.get("stageAtMdt") ?? "").trim() || undefined,
+        performanceStatus: String(formData.get("performanceStatus") ?? "").trim() || undefined,
+        responsibleClinician: String(formData.get("responsibleClinician") ?? "").trim() || undefined,
+        targetTreatmentDate: parseDate(formData.get("targetTreatmentDate")),
+        notes: String(formData.get("notes") ?? "").trim() || undefined,
+        decision: String(formData.get("decision") ?? "").trim() || undefined,
+        recommendedSurgery: check("recommendedSurgery"),
+        recommendedSystemic: check("recommendedSystemic"),
+        recommendedRadiotherapy: check("recommendedRadiotherapy"),
+        recommendedInvestigation: check("recommendedInvestigation"),
+        recommendedPalliation: check("recommendedPalliation"),
+      };
+    if (eventId) await prisma.tumourMdt.updateMany({ where: { id: eventId, tumourId }, data });
+    else await prisma.tumourMdt.create({ data });
+  } else if (type === "surgery") {
+    const data = {
+        tumourId,
+        surgeryDate: parseDate(formData.get("surgeryDate")),
+        procedure: String(formData.get("procedure") ?? "").trim() || undefined,
+        intent: String(formData.get("intent") ?? "").trim() || undefined,
+        residualDisease: String(formData.get("residualDisease") ?? "").trim() || undefined,
+        complication: String(formData.get("complication") ?? "").trim() || undefined,
+        lengthOfStay: parseIntField(formData.get("lengthOfStay")),
+        surgeon: String(formData.get("surgeon") ?? "").trim() || undefined,
+        approach: String(formData.get("approach") ?? "").trim() || undefined,
+        bloodLossMl: parseIntField(formData.get("bloodLossMl")),
+        transfusion: check("transfusion"),
+        clavienDindo: String(formData.get("clavienDindo") ?? "").trim() || undefined,
+        icu: check("icu"),
+        readmission30d: check("readmission30d"),
+        mortality30d: check("mortality30d"),
+        mortality90d: check("mortality90d"),
+        assistant: String(formData.get("assistant") ?? "").trim() || undefined,
+        anaesthesia: String(formData.get("anaesthesia") ?? "").trim() || undefined,
+        operativeFindings: String(formData.get("operativeFindings") ?? "").trim() || undefined,
+        diseaseDistribution: String(formData.get("diseaseDistribution") ?? "").trim() || undefined,
+        surgicalComplexity: String(formData.get("surgicalComplexity") ?? "").trim() || undefined,
+        ascites: check("ascites"),
+        peritonealDisease: check("peritonealDisease"),
+        nodesProcedure: String(formData.get("nodesProcedure") ?? "").trim() || undefined,
+        procedureCompleted: check("procedureCompleted"),
+        intraopComplication: String(formData.get("intraopComplication") ?? "").trim() || undefined,
+        postopComplication: String(formData.get("postopComplication") ?? "").trim() || undefined,
+        dischargeDate: parseDate(formData.get("dischargeDate")),
+        ccScore: String(formData.get("ccScore") ?? "").trim() || undefined,
+      };
+    if (eventId) await prisma.tumourSurgery.updateMany({ where: { id: eventId, tumourId }, data });
+    else await prisma.tumourSurgery.create({ data });
+  } else if (type === "systemic") {
+    const data = {
+        tumourId,
+        therapyDate: parseDate(formData.get("therapyDate")),
+        regimen: String(formData.get("regimen") ?? "").trim() || undefined,
+        cycleNumber: parseIntField(formData.get("cycleNumber")),
+        intent: String(formData.get("intent") ?? "").trim() || undefined,
+        response: String(formData.get("response") ?? "").trim() || undefined,
+        completed: check("completed"),
+        therapyType: String(formData.get("therapyType") ?? "").trim() || undefined,
+        drug: String(formData.get("drug") ?? "").trim() || undefined,
+        dose: String(formData.get("dose") ?? "").trim() || undefined,
+        doseReduction: check("doseReduction"),
+        adverseEvent: String(formData.get("adverseEvent") ?? "").trim() || undefined,
+        ctcaeGrade: String(formData.get("ctcaeGrade") ?? "").trim() || undefined,
+        reasonStopped: String(formData.get("reasonStopped") ?? "").trim() || undefined,
+        doseUnit: String(formData.get("doseUnit") ?? "").trim() || undefined,
+        reasonReduction: String(formData.get("reasonReduction") ?? "").trim() || undefined,
+        cycleCompleted: check("cycleCompleted"),
+      };
+    if (eventId) await prisma.tumourSystemic.updateMany({ where: { id: eventId, tumourId }, data });
+    else await prisma.tumourSystemic.create({ data });
+  } else if (type === "radiotherapy") {
+    const data = {
+        tumourId,
+        startDate: parseDate(formData.get("startDate")),
+        endDate: parseDate(formData.get("endDate")),
+        intent: String(formData.get("intent") ?? "").trim() || undefined,
+        ebrtDose: String(formData.get("ebrtDose") ?? "").trim() || undefined,
+        brachytherapy: check("brachytherapy"),
+        completed: check("completed"),
+        indication: String(formData.get("indication") ?? "").trim() || undefined,
+        ebrtFractions: String(formData.get("ebrtFractions") ?? "").trim() || undefined,
+        brachyDose: String(formData.get("brachyDose") ?? "").trim() || undefined,
+        interrupted: check("interrupted"),
+        interruptionDays: parseIntField(formData.get("interruptionDays")),
+        interruptionReason: String(formData.get("interruptionReason") ?? "").trim() || undefined,
+        toxicity: String(formData.get("toxicity") ?? "").trim() || undefined,
+        ebrt: check("ebrt"),
+        brachyFractions: String(formData.get("brachyFractions") ?? "").trim() || undefined,
+      };
+    if (eventId) await prisma.tumourRadiotherapy.updateMany({ where: { id: eventId, tumourId }, data });
+    else await prisma.tumourRadiotherapy.create({ data });
+  } else if (type === "recurrence") {
+    const data = {
+        tumourId,
+        recurrenceDate: parseDate(formData.get("recurrenceDate")),
+        type: String(formData.get("recurrenceType") ?? "").trim() || undefined,
+        site: String(formData.get("site") ?? "").trim() || undefined,
+        confirmationMethod: String(formData.get("confirmationMethod") ?? "").trim() || undefined,
+        treatment: String(formData.get("treatment") ?? "").trim() || undefined,
+        local: check("local"),
+        regional: check("regional"),
+        distant: check("distant"),
+        treatmentRecommended: String(formData.get("treatmentRecommended") ?? "").trim() || undefined,
+        treatmentGiven: String(formData.get("treatmentGiven") ?? "").trim() || undefined,
+      };
+    if (eventId) await prisma.tumourRecurrence.updateMany({ where: { id: eventId, tumourId }, data });
+    else await prisma.tumourRecurrence.create({ data });
+  } else if (type === "outcome") {
+    const data = {
+        tumourId,
+        statusDate: parseDate(formData.get("statusDate")) ?? new Date(),
+        vitalStatus: String(formData.get("vitalStatus") ?? "").trim() || undefined,
+        diseaseStatus: String(formData.get("diseaseStatus") ?? "").trim() || undefined,
+        lastContactDate: parseDate(formData.get("lastContactDate")),
+        deathDate: parseDate(formData.get("deathDate")),
+        causeOfDeath: String(formData.get("causeOfDeath") ?? "").trim() || undefined,
+        lostToFollowUp: check("lostToFollowUp"),
+        lostFollowUpDate: parseDate(formData.get("lostFollowUpDate")),
+        cancerRelatedDeath: check("cancerRelatedDeath"),
+      };
+    if (eventId) await prisma.tumourOutcome.updateMany({ where: { id: eventId, tumourId }, data });
+    else await prisma.tumourOutcome.create({ data });
+  } else if (type === "lab") {
+    const data = {
+        tumourId,
+        labDate: parseDate(formData.get("labDate")),
+        labTest: String(formData.get("labTest") ?? "").trim() || undefined,
+        labValue: String(formData.get("labValue") ?? "").trim() || undefined,
+        labUnit: String(formData.get("labUnit") ?? "").trim() || undefined,
+        labCategory: String(formData.get("labCategory") ?? "").trim() || undefined,
+        referenceLow: String(formData.get("referenceLow") ?? "").trim() || undefined,
+        referenceHigh: String(formData.get("referenceHigh") ?? "").trim() || undefined,
+        abnormalFlag: String(formData.get("abnormalFlag") ?? "").trim() || undefined,
+        laboratory: String(formData.get("laboratory") ?? "").trim() || undefined,
+      };
+    if (eventId) await prisma.tumourLab.updateMany({ where: { id: eventId, tumourId }, data });
+    else await prisma.tumourLab.create({ data });
+  } else if (type === "treatmentPlan") {
+    const data = {
+      tumourId,
+      planDate: parseDate(formData.get("planDate")) ?? new Date(),
+      intent: String(formData.get("intent") ?? "").trim() || undefined,
+      plannedSurgery: check("plannedSurgery"),
+      plannedSystemic: check("plannedSystemic"),
+      plannedRadiotherapy: check("plannedRadiotherapy"),
+      plannedPalliative: check("plannedPalliative"),
+      plannedInvestigation: check("plannedInvestigation"),
+      mdtRecommendationId: String(formData.get("mdtRecommendationId") ?? "").trim() || undefined,
+      treatmentSequence: String(formData.get("treatmentSequence") ?? "").trim() || undefined,
+      notes: String(formData.get("notes") ?? "").trim() || undefined,
+    };
+    if (eventId) await prisma.treatmentPlan.updateMany({ where: { id: eventId, tumourId }, data });
+    else await prisma.treatmentPlan.create({ data });
+  } else if (type === "tumourComplication") {
+    const data = {
+      tumourId,
+      complicationDate: parseDate(formData.get("complicationDate")),
+      complicationType: String(formData.get("complicationType") ?? "").trim() || undefined,
+      clavienDindo: String(formData.get("clavienDindo") ?? "").trim() || undefined,
+      linkedProcedure: String(formData.get("linkedProcedure") ?? "").trim() || undefined,
+      readmission: check("readmission"),
+      reoperation: check("reoperation"),
+      icu: check("icu"),
+      mortality30Day: check("mortality30Day"),
+      mortality90Day: check("mortality90Day"),
+    };
+    if (eventId) await prisma.tumourComplication.updateMany({ where: { id: eventId, tumourId }, data });
+    else await prisma.tumourComplication.create({ data });
+  } else {
+    redirectWithError(patientPath(patientId), "Unknown clinical event");
+  }
+
+  await refreshTumourReadiness(tumourId);
+  await logAudit({ userId: session.id, userEmail: session.email, action: eventId ? "UPDATE" : "CREATE", entityType: type, entityId: eventId || tumourId });
+  await refreshRegistryViews(patientId);
+  revalidatePath(patientPath(patientId));
+  redirect(`${patientPath(patientId)}#tumour-${tumourId}`);
+}
+
+export async function saveMdtPreparationAction(patientId: string, tumourId: string, formData: FormData) {
+  const session = await requirePermission("clinical:write");
+  const tumour = await prisma.tumour.findFirst({ where: { id: tumourId, patientId }, select: { id: true } });
+  if (!tumour) redirectWithError(patientPath(patientId), "Tumour not found for this patient");
+  const check = (name: string) => formData.get(name) === "on";
+  const eventId = String(formData.get("eventId") ?? "").trim();
+  const histologyRequired = check("histologyRequired");
+  const imagingRequired = check("imagingRequired");
+  const histologyAvailable = check("histologyAvailable");
+  const imagingAvailable = check("imagingAvailable");
+  const labsComplete = check("labsComplete");
+  const clinicalSummaryComplete = check("clinicalSummaryComplete");
+  const data = {
+      tumourId,
+      requestDate: parseDate(formData.get("requestDate")),
+      indication: String(formData.get("indication") ?? "").trim() || undefined,
+      histologyRequired,
+      histologyAvailable,
+      imagingRequired,
+      imagingAvailable,
+      labsComplete,
+      clinicalSummaryComplete,
+      ready: (!histologyRequired || histologyAvailable) && (!imagingRequired || imagingAvailable) && labsComplete && clinicalSummaryComplete,
+      bookingDate: parseDate(formData.get("bookingDate")),
+      scheduledDate: parseDate(formData.get("scheduledDate")),
+      status: String(formData.get("status") ?? "").trim() || undefined,
+      reasonNotReady: String(formData.get("reasonNotReady") ?? "").trim() || undefined,
+    };
+  if (eventId) {
+    const result = await prisma.mdtPreparation.updateMany({ where: { id: eventId, tumourId }, data });
+    if (!result.count) redirectWithError(patientPath(patientId), "MDT preparation not found");
+  } else {
+    await prisma.mdtPreparation.create({ data });
+  }
+  await logAudit({ userId: session.id, userEmail: session.email, action: eventId ? "UPDATE" : "CREATE", entityType: "MdtPreparation", entityId: eventId || tumourId });
+  await refreshTumourReadiness(tumourId);
+  revalidatePath(patientPath(patientId));
+  redirect(`${patientPath(patientId)}#tumour-${tumourId}`);
+}
+
+export async function deleteMdtPreparationAction(patientId: string, tumourId: string, eventId: string) {
+  const session = await requirePermission("clinical:write");
+  const result = await prisma.mdtPreparation.deleteMany({ where: { id: eventId, tumourId, tumour: { patientId } } });
+  if (!result.count) redirectWithError(patientPath(patientId), "MDT preparation not found");
+  await logAudit({ userId: session.id, userEmail: session.email, action: "DELETE", entityType: "MdtPreparation", entityId: eventId });
+  await refreshTumourReadiness(tumourId);
+  revalidatePath(patientPath(patientId));
+  redirect(`${patientPath(patientId)}#tumour-${tumourId}`);
+}
+
+export async function deleteTumourEventAction(patientId: string, tumourId: string, type: string, eventId: string) {
+  const session = await requirePermission("clinical:write");
+  const tumour = await prisma.tumour.findFirst({ where: { id: tumourId, patientId }, select: { id: true } });
+  if (!tumour) redirectWithError(patientPath(patientId), "Tumour not found for this patient");
+  const where = { id: eventId, tumourId };
+  const deleted =
+    type === "assessment" ? await prisma.clinicalAssessment.deleteMany({ where }) :
+    type === "pathology" ? await prisma.tumourPathology.deleteMany({ where }) :
+    type === "imaging" ? await prisma.tumourImaging.deleteMany({ where }) :
+    type === "staging" ? await prisma.tumourStaging.deleteMany({ where }) :
+    type === "mdt" ? await prisma.tumourMdt.deleteMany({ where }) :
+    type === "surgery" ? await prisma.tumourSurgery.deleteMany({ where }) :
+    type === "systemic" ? await prisma.tumourSystemic.deleteMany({ where }) :
+    type === "radiotherapy" ? await prisma.tumourRadiotherapy.deleteMany({ where }) :
+    type === "recurrence" ? await prisma.tumourRecurrence.deleteMany({ where }) :
+    type === "outcome" ? await prisma.tumourOutcome.deleteMany({ where }) :
+    type === "lab" ? await prisma.tumourLab.deleteMany({ where }) :
+    type === "treatmentPlan" ? await prisma.treatmentPlan.deleteMany({ where }) :
+    type === "tumourComplication" ? await prisma.tumourComplication.deleteMany({ where }) : null;
+  if (!deleted?.count) redirectWithError(patientPath(patientId), "Clinical record not found");
+  await logAudit({ userId: session.id, userEmail: session.email, action: "DELETE", entityType: type, entityId: eventId });
+  await refreshTumourReadiness(tumourId);
+  revalidatePath(patientPath(patientId));
+  redirect(`${patientPath(patientId)}#tumour-${tumourId}`);
 }

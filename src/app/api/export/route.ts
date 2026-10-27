@@ -15,9 +15,12 @@ function parseFilters(searchParams: URLSearchParams): ExportFilters {
   return {
     cancerType: searchParams.get("cancer") ?? undefined,
     province: searchParams.get("province") ?? undefined,
+    figo: searchParams.get("figo") ?? undefined,
+    hiv: searchParams.get("hiv") ?? undefined,
     consentOnly: searchParams.get("consent") === "1",
     dateFrom: searchParams.get("from") ?? undefined,
     dateTo: searchParams.get("to") ?? undefined,
+    omitDistrict: searchParams.get("omitDistrict") === "1",
   };
 }
 
@@ -37,7 +40,7 @@ export async function GET(request: NextRequest) {
   const dateStamp = new Date().toISOString().slice(0, 10);
 
   const patients = await fetchPatientsForExport(filters);
-  const rows = buildExportRows(patients);
+  const rows = buildExportRows(patients, filters);
 
   await prisma.exportLog.create({
     data: {

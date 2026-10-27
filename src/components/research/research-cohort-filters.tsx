@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CANCER_TYPE, PROVINCES } from "@/lib/codes";
+import { CANCER_TYPE, FIGO_STAGE, HIV_STATUS, PROVINCES } from "@/lib/codes";
 import type { ResearchCohortFilter } from "@/lib/research-completeness";
 
 export function ResearchCohortFilters({
@@ -16,6 +16,8 @@ export function ResearchCohortFilters({
   const consent = filter.consent ?? "all";
   const cancer = filter.cancer ?? "";
   const province = filter.province ?? "";
+  const figo = filter.figo ?? "";
+  const hiv = filter.hiv ?? "";
   const dateFrom = filter.dateFrom ?? "";
   const dateTo = filter.dateTo ?? "";
 
@@ -24,11 +26,15 @@ export function ResearchCohortFilters({
     const c = next.consent ?? consent;
     const ct = next.cancer !== undefined ? next.cancer : cancer;
     const pv = next.province !== undefined ? next.province : province;
+    const fs = next.figo !== undefined ? next.figo : figo;
+    const hs = next.hiv !== undefined ? next.hiv : hiv;
     const df = next.dateFrom !== undefined ? next.dateFrom : dateFrom;
     const dt = next.dateTo !== undefined ? next.dateTo : dateTo;
     if (c && c !== "all") params.set("consent", c);
     if (ct) params.set("cancer", ct);
     if (pv) params.set("province", pv);
+    if (fs) params.set("figo", fs);
+    if (hs) params.set("hiv", hs);
     if (df) params.set("from", df);
     if (dt) params.set("to", dt);
     const qs = params.toString();
@@ -93,6 +99,28 @@ export function ResearchCohortFilters({
         </select>
       </div>
       <div>
+        <p className="mb-1.5 text-[11px] font-semibold tracking-wide text-[#7C8983] uppercase">FIGO</p>
+        <select
+          className="h-9 rounded-[10px] border border-[#E2DDD3] bg-white px-3 text-[13px]"
+          value={figo}
+          onChange={(e) => pushFilter({ figo: e.target.value })}
+        >
+          <option value="">All stages</option>
+          {FIGO_STAGE.map((stage) => <option key={stage.code} value={stage.code}>{stage.label}</option>)}
+        </select>
+      </div>
+      <div>
+        <p className="mb-1.5 text-[11px] font-semibold tracking-wide text-[#7C8983] uppercase">HIV</p>
+        <select
+          className="h-9 rounded-[10px] border border-[#E2DDD3] bg-white px-3 text-[13px]"
+          value={hiv}
+          onChange={(e) => pushFilter({ hiv: e.target.value })}
+        >
+          <option value="">All statuses</option>
+          {HIV_STATUS.map((status) => <option key={status.code} value={status.code}>{status.label}</option>)}
+        </select>
+      </div>
+      <div>
         <p className="mb-1.5 text-[11px] font-semibold tracking-wide text-[#7C8983] uppercase">Diagnosis from</p>
         <input
           type="date"
@@ -110,7 +138,7 @@ export function ResearchCohortFilters({
           className="h-9 rounded-[10px] border border-[#E2DDD3] bg-white px-3 text-[13px]"
         />
       </div>
-      {consent !== "all" || cancer || province || dateFrom || dateTo ? (
+      {consent !== "all" || cancer || province || figo || hiv || dateFrom || dateTo ? (
         <Link href="/research" className="text-[13px] text-[#7A3B5E] underline">
           Clear filters
         </Link>

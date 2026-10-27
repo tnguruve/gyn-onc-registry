@@ -70,3 +70,21 @@ export function rate(numerator: number, denominator: number): number | null {
   if (denominator === 0) return null;
   return Math.round((numerator / denominator) * 1000) / 10;
 }
+
+export function earliestDate(
+  dates: Array<Date | null | undefined>,
+): Date | null {
+  const valid = dates.filter((date): date is Date => Boolean(date));
+  return valid.length > 0
+    ? new Date(Math.min(...valid.map((date) => date.getTime())))
+    : null;
+}
+
+export function latestDate(
+  dates: Array<Date | null | undefined>,
+): Date | null {
+  const valid = dates.filter((date): date is Date => Boolean(date));
+  return valid.length > 0
+    ? new Date(Math.max(...valid.map((date) => date.getTime())))
+    : null;
+}

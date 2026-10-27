@@ -10,9 +10,12 @@ type Preset = {
   name: string;
   cancer: string;
   province: string;
+  figo: string;
+  hiv: string;
   consentOnly: boolean;
   dateFrom: string;
   dateTo: string;
+  omitDistrict: boolean;
 };
 
 const PRESET_KEY = "gynonc-export-presets";
@@ -20,17 +23,23 @@ const PRESET_KEY = "gynonc-export-presets";
 function buildExportUrl(opts: {
   cancer: string;
   province: string;
+  figo: string;
+  hiv: string;
   consentOnly: boolean;
   dateFrom: string;
   dateTo: string;
+  omitDistrict: boolean;
   format?: string;
 }) {
   const params = new URLSearchParams();
   if (opts.cancer.trim()) params.set("cancer", opts.cancer.trim());
   if (opts.province.trim()) params.set("province", opts.province.trim());
+  if (opts.figo.trim()) params.set("figo", opts.figo.trim());
+  if (opts.hiv.trim()) params.set("hiv", opts.hiv.trim());
   if (opts.consentOnly) params.set("consent", "1");
   if (opts.dateFrom.trim()) params.set("from", opts.dateFrom.trim());
   if (opts.dateTo.trim()) params.set("to", opts.dateTo.trim());
+  if (opts.omitDistrict) params.set("omitDistrict", "1");
   if (opts.format && opts.format !== "csv") params.set("format", opts.format);
   const qs = params.toString();
   return qs ? `/api/export?${qs}` : `/api/export`;
@@ -40,6 +49,8 @@ export function ResearchExportPanel({
   rowEstimate,
   defaultCancer,
   defaultProvince,
+  defaultFigo,
+  defaultHiv,
   defaultDateFrom,
   defaultDateTo,
   consentOnlyDefault = false,
@@ -47,30 +58,40 @@ export function ResearchExportPanel({
   rowEstimate: number;
   defaultCancer?: string;
   defaultProvince?: string;
+  defaultFigo?: string;
+  defaultHiv?: string;
   defaultDateFrom?: string;
   defaultDateTo?: string;
   consentOnlyDefault?: boolean;
 }) {
   const [cancer, setCancer] = useState(defaultCancer ?? "");
   const [province, setProvince] = useState(defaultProvince ?? "");
+  const [figo, setFigo] = useState(defaultFigo ?? "");
+  const [hiv, setHiv] = useState(defaultHiv ?? "");
   const [dateFrom, setDateFrom] = useState(defaultDateFrom ?? "");
   const [dateTo, setDateTo] = useState(defaultDateTo ?? "");
   const [consentOnly, setConsentOnly] = useState(consentOnlyDefault);
+  const [omitDistrict, setOmitDistrict] = useState(false);
   const [presets, setPresets] = useState<Preset[]>([]);
   const [presetName, setPresetName] = useState("");
 
   useEffect(() => {
+    let frame = 0;
     try {
       const raw = localStorage.getItem(PRESET_KEY);
-      if (raw) setPresets(JSON.parse(raw) as Preset[]);
+      if (raw) {
+        const saved = JSON.parse(raw) as Preset[];
+        frame = requestAnimationFrame(() => setPresets(saved));
+      }
     } catch {
       /* ignore */
     }
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   const base = useMemo(
-    () => ({ cancer, province, consentOnly, dateFrom, dateTo }),
-    [cancer, province, consentOnly, dateFrom, dateTo],
+    () => ({ cancer, province, figo, hiv, consentOnly, dateFrom, dateTo, omitDistrict }),
+    [cancer, province, figo, hiv, consentOnly, dateFrom, dateTo, omitDistrict],
   );
 
   const csvUrl = useMemo(() => buildExportUrl(base), [base]);
@@ -88,9 +109,12 @@ export function ResearchExportPanel({
   function loadPreset(p: Preset) {
     setCancer(p.cancer);
     setProvince(p.province);
+    setFigo(p.figo ?? "");
+    setHiv(p.hiv ?? "");
     setConsentOnly(p.consentOnly);
     setDateFrom(p.dateFrom);
     setDateTo(p.dateTo);
+    setOmitDistrict(p.omitDistrict ?? false);
   }
 
   return (
@@ -106,6 +130,8 @@ export function ResearchExportPanel({
           href={`/research/report?${new URLSearchParams({
             ...(cancer ? { cancer } : {}),
             ...(province ? { province } : {}),
+            ...(figo ? { figo } : {}),
+            ...(hiv ? { hiv } : {}),
             ...(consentOnly ? { consent: "yes" } : {}),
             ...(dateFrom ? { from: dateFrom } : {}),
             ...(dateTo ? { to: dateTo } : {}),
@@ -127,6 +153,14 @@ export function ResearchExportPanel({
           <Input id="export-province" value={province} onChange={(e) => setProvince(e.target.value)} placeholder="1–10" />
         </FormField>
         <FormField>
+          <Label htmlFor="export-figo">FIGO stage code</Label>
+          <Input id="export-figo" value={figo} onChange={(e) => setFigo(e.target.value)} placeholder="1–13" />
+        </FormField>
+        <FormField>
+          <Label htmlFor="export-hiv">HIV status code</Label>
+          <Input id="export-hiv" value={hiv} onChange={(e) => setHiv(e.target.value)} placeholder="1–3" />
+        </FormField>
+        <FormField>
           <Label htmlFor="export-from">Diagnosis from</Label>
           <Input id="export-from" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
         </FormField>
@@ -145,6 +179,19 @@ export function ResearchExportPanel({
               className="h-4 w-4 accent-[#0C4F4E]"
             />
             Consented patients only
+          </label>
+        </FormField>
+        <FormField>
+          <Label htmlFor="export-district">Location detail</Label>
+          <label className="flex h-11 cursor-pointer items-center gap-2 rounded-[10px] border border-[#E2DDD3] bg-white px-3 text-sm">
+            <input
+              id="export-district"
+              type="checkbox"
+              checked={omitDistrict}
+              onChange={(e) => setOmitDistrict(e.target.checked)}
+              className="h-4 w-4 accent-[#0C4F4E]"
+            />
+            Omit district
           </label>
         </FormField>
       </div>

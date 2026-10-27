@@ -23,10 +23,7 @@ export function CountUpStat({
   useEffect(() => {
     if (ran.current) return;
     ran.current = true;
-    if (reducedMotion) {
-      setDisplay(value);
-      return;
-    }
+    if (reducedMotion) return;
 
     let start: number | null = null;
     let frame = 0;

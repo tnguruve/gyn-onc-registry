@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SessionUser, destroySession } from "@/lib/auth";
+import { SessionUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { roleLabel } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";

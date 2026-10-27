@@ -1,5 +1,8 @@
 import type {
   Diagnosis,
+  MedicalHistory,
+  PatientOutcome,
+  ReferralEpisode,
   FollowUpVisit,
   Histopathology,
   Patient,
@@ -8,10 +11,34 @@ import type {
   ResearchModule,
   Surgery,
   Survival,
+  Tumour,
+  TumourComplication,
+  TumourMdt,
+  TumourOutcome,
+  TumourPathology,
+  TumourRadiotherapy,
+  TumourRecurrence,
+  TumourStaging,
+  TumourSurgery,
+  TumourSystemic,
 } from "@prisma/client";
+import { primarySiteFromCancerType } from "@/lib/codes";
+
+export type ResearchTumour = Tumour & {
+  pathology: TumourPathology[];
+  stagings: TumourStaging[];
+  mdts: TumourMdt[];
+  surgeries: TumourSurgery[];
+  systemicTherapies: TumourSystemic[];
+  radiotherapies: TumourRadiotherapy[];
+  complications: TumourComplication[];
+  recurrences: TumourRecurrence[];
+  outcomes: TumourOutcome[];
+};
 
 export type ResearchPatient = Patient & {
   referral: Referral | null;
+  referralEpisodes: ReferralEpisode[];
   diagnosis: Diagnosis | null;
   research: ResearchModule | null;
   surgeries: Surgery[];
@@ -19,6 +46,9 @@ export type ResearchPatient = Patient & {
   followUps: FollowUpVisit[];
   survival: Survival | null;
   recurrence: Recurrence | null;
+  medicalHistory: MedicalHistory | null;
+  patientOutcome: PatientOutcome | null;
+  tumours: ResearchTumour[];
 };
 
 export type ModuleCompleteness = {
@@ -38,11 +68,21 @@ export function assessPatientCompleteness(patient: ResearchPatient): {
     {
       key: "referral",
       label: "Referral & delays",
-      complete: Boolean(patient.referral?.symptomStartDate && patient.referral?.diagnosisDate),
+      complete: Boolean(
+        (patient.referral?.referralDate || patient.referralEpisodes.some((row) => row.referralDate)) &&
+        patient.tumours.some((tumour) => tumour.diagnosisDate || tumour.incidenceDate),
+      ),
     },
-    { key: "diagnosis", label: "Diagnosis", complete: Boolean(patient.diagnosis?.cancerType && patient.diagnosis?.figoStage) },
-    { key: "surgery", label: "Surgery", complete: patient.surgeries.length > 0 },
-    { key: "histopathology", label: "Histopathology", complete: Boolean(patient.histopathology) },
+    {
+      key: "diagnosis",
+      label: "Diagnosis",
+      complete: Boolean(
+        (patient.diagnosis?.cancerType && patient.diagnosis?.figoStage) ||
+          patient.tumours?.some((t) => t.site && t.figoStage),
+      ),
+    },
+    { key: "surgery", label: "Surgery", complete: patient.tumours.some((tumour) => tumour.surgeries.length > 0) },
+    { key: "histopathology", label: "Histopathology", complete: patient.tumours.some((tumour) => tumour.pathology.length > 0) },
     { key: "followup", label: "Follow-up", complete: patient.followUps.length > 0 },
     {
       key: "research",
@@ -67,8 +107,7 @@ export function assessPatientCompleteness(patient: ResearchPatient): {
   else if (!patient.research.consentForResearch) issues.push("Research consent not recorded");
 
   const researchReady =
-    Boolean(patient.diagnosis?.cancerType) &&
-    Boolean(patient.referral?.diagnosisDate) &&
+    Boolean(patient.tumours.some((tumour) => tumour.site && (tumour.diagnosisDate || tumour.incidenceDate))) &&
     Boolean(patient.research?.consentForResearch);
 
   return { modules, percent, researchReady, issues };
@@ -78,9 +117,20 @@ export type ResearchCohortFilter = {
   consent?: "all" | "yes" | "no";
   cancer?: string;
   province?: string;
+  figo?: string;
+  hiv?: string;
   dateFrom?: string;
   dateTo?: string;
 };
+
+export function resolvedTumourStage(tumour: ResearchTumour): string {
+  const staging = [...tumour.stagings].sort((a, b) => +b.stagingDate - +a.stagingDate)[0];
+  return staging?.finalStage ?? staging?.stage ?? tumour.figoStage ?? "";
+}
+
+export function resolvedTumourHiv(patient: ResearchPatient, tumour: ResearchTumour): string {
+  return tumour.hivStatus ?? patient.medicalHistory?.hivStatus ?? patient.hivStatus ?? "";
+}
 
 function inDateRange(date: Date | null | undefined, from?: string, to?: string): boolean {
   if (!from && !to) return true;
@@ -101,22 +151,43 @@ function inDateRange(date: Date | null | undefined, from?: string, to?: string):
 
 export function filterResearchCohort(patients: ResearchPatient[], filter: ResearchCohortFilter): ResearchPatient[] {
   return patients.filter((p) => {
-    if (filter.cancer && p.diagnosis?.cancerType !== filter.cancer) return false;
+    if (filter.cancer) {
+      const site = primarySiteFromCancerType(filter.cancer);
+      const fromTumour = site ? p.tumours?.some((t) => t.site === site) : false;
+      if (p.diagnosis?.cancerType !== filter.cancer && !fromTumour) return false;
+    }
     if (filter.province && p.province !== filter.province) return false;
     if (filter.consent === "yes" && !p.research?.consentForResearch) return false;
     if (filter.consent === "no" && p.research?.consentForResearch) return false;
-    if (!inDateRange(p.referral?.diagnosisDate, filter.dateFrom, filter.dateTo)) return false;
+    if (filter.figo && !p.tumours.some((tumour) => resolvedTumourStage(tumour) === filter.figo)) return false;
+    if (filter.hiv && !p.tumours.some((tumour) => resolvedTumourHiv(p, tumour) === filter.hiv)) return false;
+    if (
+      (filter.dateFrom || filter.dateTo) &&
+      !p.tumours.some((tumour) =>
+        inDateRange(tumour.diagnosisDate ?? tumour.incidenceDate, filter.dateFrom, filter.dateTo),
+      )
+    ) return false;
     return true;
   });
 }
 
 export function matchesExportFilters(
   patient: ResearchPatient,
-  filter: { cancer?: string; province?: string; consentOnly?: boolean; dateFrom?: string; dateTo?: string },
+  filter: { cancer?: string; province?: string; figo?: string; hiv?: string; consentOnly?: boolean; dateFrom?: string; dateTo?: string },
 ): boolean {
   if (filter.province && patient.province !== filter.province) return false;
-  if (filter.cancer && patient.diagnosis?.cancerType !== filter.cancer) return false;
+  if (filter.cancer) {
+    const site = primarySiteFromCancerType(filter.cancer) ?? filter.cancer;
+    if (!patient.tumours.some((tumour) => tumour.site === site)) return false;
+  }
   if (filter.consentOnly && !patient.research?.consentForResearch) return false;
-  if (!inDateRange(patient.referral?.diagnosisDate, filter.dateFrom, filter.dateTo)) return false;
+  if (filter.figo && !patient.tumours.some((tumour) => resolvedTumourStage(tumour) === filter.figo)) return false;
+  if (filter.hiv && !patient.tumours.some((tumour) => resolvedTumourHiv(patient, tumour) === filter.hiv)) return false;
+  if (
+    (filter.dateFrom || filter.dateTo) &&
+    !patient.tumours.some((tumour) =>
+      inDateRange(tumour.diagnosisDate ?? tumour.incidenceDate, filter.dateFrom, filter.dateTo),
+    )
+  ) return false;
   return true;
 }

@@ -81,6 +81,9 @@ export default async function AdminPage({
                 >
                   <option value="FRONT_DESK">Front desk</option>
                   <option value="CLINICIAN">Clinician</option>
+                  <option value="MDT_COORDINATOR">MDT coordinator</option>
+                  <option value="DATA_MANAGER">Data manager</option>
+                  <option value="RESEARCHER">Researcher</option>
                   <option value="ADMIN">Administrator</option>
                 </select>
               </div>

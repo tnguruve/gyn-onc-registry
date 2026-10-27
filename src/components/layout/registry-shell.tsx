@@ -18,7 +18,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: "Clinical",
     items: [
-      { href: "/dashboard", label: "Front desk", icon: "▦" },
+      { href: "/dashboard", label: "Operations", icon: "▦" },
       { href: "/patients", label: "Patients", icon: "❏", badgeKey: "patients" },
       { href: "/builder", label: "Module builder", icon: "⚙", permission: "modules:manage" },
     ],
@@ -46,10 +46,6 @@ export function RegistryShell({
   const searchParams = useSearchParams();
   const [search, setSearch] = useState(searchParams.get("q") ?? "");
   const [navOpen, setNavOpen] = useState(false);
-
-  useEffect(() => {
-    setNavOpen(false);
-  }, [pathname]);
 
   useEffect(() => {
     document.body.style.overflow = navOpen ? "hidden" : "";
@@ -140,6 +136,7 @@ export function RegistryShell({
                     <Link
                       key={item.label}
                       href={item.href}
+                      onClick={() => setNavOpen(false)}
                       className={`flex min-h-[44px] items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm transition-colors ${
                         active
                           ? "bg-[rgba(234,242,240,0.14)] font-semibold text-white"
@@ -220,7 +217,7 @@ export function RegistryShell({
 }
 
 function pageTitle(pathname: string) {
-  if (pathname === "/dashboard") return { title: "Front desk", sub: "Register patients and manage the clinic day" };
+  if (pathname === "/dashboard") return { title: "Clinical operations", sub: "Queues from the patient chart — histology, MDT, treatment, follow-up" };
   if (pathname === "/patients") return { title: "Patients", sub: "Search and open patient charts" };
   if (pathname === "/patients/new") return { title: "New patient", sub: "Module 1 — registration" };
   if (pathname.startsWith("/patients/")) return { title: "Patient record", sub: "Enter and edit clinical modules" };
