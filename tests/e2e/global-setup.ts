@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 
-export const E2E_PASSWORD = "RegistryE2E123!";
+export const E2E_PASSWORD = "Test1234!";
 export const E2E_PATIENT_REGISTRY = "GYN-E2E";
 
 export default async function globalSetup() {
